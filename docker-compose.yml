@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5438:5432"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - ayllu_gen_network
+
+networks:
+  ayllu_gen_network:
+    driver: bridge

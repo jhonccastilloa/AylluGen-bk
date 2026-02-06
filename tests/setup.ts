@@ -1,0 +1,32 @@
+import "reflect-metadata";
+
+process.env.NODE_ENV = "test";
+process.env.PORT = "3001";
+process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test_db";
+process.env.JWT_SECRET = "test-secret-key-for-jwt-tokens-at-least-32-chars";
+process.env.REFRESH_TOKEN_SECRET =
+  "test-refresh-secret-key-for-jwt-refresh-tokens-at-least-32-chars";
+
+jest.mock("../src/infrastructure/database/prisma/client", () => ({
+  prisma: {
+    user: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    refreshToken: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
+    $connect: jest.fn(),
+    $disconnect: jest.fn(),
+  },
+  transaction: jest.fn(),
+}));
