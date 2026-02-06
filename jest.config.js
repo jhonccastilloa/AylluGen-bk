@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
   roots: ["<rootDir>/tests"],
@@ -18,7 +18,16 @@ export default {
     "^@infrastructure/(.*)$": "<rootDir>/src/infrastructure/$1",
     "^@presentation/(.*)$": "<rootDir>/src/presentation/$1",
     "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^@modules/(.*)$": "<rootDir>/src/modules/$1",
   },
   setupFilesAfterEnv: ["<rootDir>/tests/setup.ts"],
   testTimeout: 10000,
+  transform: {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: "./tsconfig.test.json",
+      },
+    ],
+  },
 };
