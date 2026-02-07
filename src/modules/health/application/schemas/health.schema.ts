@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { HealthType } from "../../domain/entities/HealthRecord";
+import { Sex, Species } from "../../../animal/domain/entities/Animal";
+
+const animalRelationSchema = z.object({
+  id: z.uuid(),
+  crotal: z.string(),
+  sex: z.enum(Sex),
+  species: z.enum(Species),
+  birthDate: z.iso.datetime().nullable(),
+  isFounder: z.boolean(),
+});
 
 export const healthRecordCreateSchema = z
   .object({
@@ -84,7 +94,7 @@ export const healthRecordResponseSchema = z
   .object({
     id: z.uuid(),
     animalId: z.uuid(),
-    animal: z.any().nullable(),
+    animal: animalRelationSchema.nullable(),
     type: z.enum(HealthType),
     date: z.iso.datetime(),
     notes: z.string().nullable(),

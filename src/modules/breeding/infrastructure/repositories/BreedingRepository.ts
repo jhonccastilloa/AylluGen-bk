@@ -1,11 +1,22 @@
 import { injectable } from "inversify";
 import { prisma } from "../../../../infrastructure/database/prisma/client";
 import {
+  RiskLevel,
   Breeding,
   BreedingCreateInput,
+  SyncStatus,
   BreedingUpdateInput,
 } from "../../../breeding/domain/entities/Breeding";
+import { Animal, Sex, Species, SyncStatus as AnimalSyncStatus } from "../../../animal/domain/entities/Animal";
+import type {
+  Animal as PrismaAnimal,
+  Breeding as PrismaBreeding,
+} from "@infrastructure/database/prisma/generated/client";
 import { IBreedingRepository } from "../../../breeding/domain/repositories/IBreedingRepository";
+
+type BreedingWithRelations = PrismaBreeding & {
+  offspring?: PrismaAnimal | null;
+};
 
 @injectable()
 export class BreedingRepository implements IBreedingRepository {
@@ -73,22 +84,41 @@ export class BreedingRepository implements IBreedingRepository {
     return breedings.map((b) => this.mapToEntity(b));
   }
 
-  private mapToEntity(data: any): Breeding {
+  private mapToEntity(data: BreedingWithRelations): Breeding {
     return {
       id: data.id,
       maleId: data.maleId,
       femaleId: data.femaleId,
       projectedCOI: data.projectedCOI,
-      riskLevel: data.riskLevel,
-      offspringId: data.offspringId,
-      offspring: data.offspring,
-      breedingDate: data.breedingDate,
-      notes: data.notes,
+      riskLevel: data.riskLevel as RiskLevel,
+      offspringId: data.offspringId ?? undefined,
+      offspring: data.offspring ? this.mapAnimalToEntity(data.offspring) : undefined,
+      breedingDate: data.breedingDate ?? undefined,
+      notes: data.notes ?? undefined,
       userId: data.userId,
-      syncStatus: data.syncStatus,
+      syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+    };
+  }
+
+  private mapAnimalToEntity(data: PrismaAnimal): Animal {
+    return {
+      id: data.id,
+      crotal: data.crotal,
+      sex: data.sex as Sex,
+      species: data.species as Species,
+      birthDate: data.birthDate ?? undefined,
+      isFounder: data.isFounder,
+      fatherId: data.fatherId ?? undefined,
+      motherId: data.motherId ?? undefined,
+      userId: data.userId,
+      syncStatus: data.syncStatus as AnimalSyncStatus,
+      syncVersion: data.syncVersion,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      deletedAt: data.deletedAt ?? undefined,
     };
   }
 }

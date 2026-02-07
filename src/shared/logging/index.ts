@@ -47,21 +47,21 @@ class Logger {
     return Logger.instance;
   }
 
-  public static child(metadata: Record<string, any>): winston.Logger {
+  public static child(metadata: Record<string, unknown>): winston.Logger {
     return this.getInstance().child(metadata);
   }
 
-  public static info(message: string, metadata?: Record<string, any>): void {
+  public static info(message: string, metadata?: Record<string, unknown>): void {
     this.getInstance().info(message, metadata);
   }
 
-  public static warn(message: string, metadata?: Record<string, any>): void {
+  public static warn(message: string, metadata?: Record<string, unknown>): void {
     this.getInstance().warn(message, metadata);
   }
 
   public static error(
     message: string,
-    error?: Error | Record<string, any>,
+    error?: Error | Record<string, unknown>,
   ): void {
     if (error instanceof Error) {
       this.getInstance().error(message, {
@@ -74,7 +74,7 @@ class Logger {
     }
   }
 
-  public static debug(message: string, metadata?: Record<string, any>): void {
+  public static debug(message: string, metadata?: Record<string, unknown>): void {
     this.getInstance().debug(message, metadata);
   }
 }

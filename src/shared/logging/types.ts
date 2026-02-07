@@ -9,7 +9,7 @@ export interface LogMetadata {
   duration?: number;
   ip?: string;
   userAgent?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface LogEntry {

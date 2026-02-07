@@ -4,12 +4,19 @@ import { IAnimalRepository } from "../../../animal/domain/repositories/IAnimalRe
 import { TYPES } from "../../../../shared/di/types";
 import {
   HealthRecordCreateInput,
-  HealthRecordUpdateInput,
+  HealthRecordResponse,
+  HealthRecordUpdateInput as HealthRecordUpdateSchemaInput,
+  UpcomingTaskResponse,
 } from "../schemas/health.schema";
 import {
   NotFoundError,
   ValidationError,
 } from "../../../../shared/errors/AppError";
+import {
+  HealthRecord,
+  HealthRecordUpdateInput as HealthRecordUpdateEntityInput,
+  HealthType,
+} from "../../domain/entities/HealthRecord";
 
 @injectable()
 export class HealthRecordService {
@@ -20,7 +27,10 @@ export class HealthRecordService {
     private animalRepository: IAnimalRepository,
   ) {}
 
-  async create(userId: string, data: HealthRecordCreateInput): Promise<any> {
+  async create(
+    userId: string,
+    data: HealthRecordCreateInput,
+  ): Promise<HealthRecordResponse> {
     const animal = await this.animalRepository.findById(data.animalId);
     if (!animal) {
       throw new NotFoundError("Animal not found");
@@ -45,8 +55,8 @@ export class HealthRecordService {
   async update(
     id: string,
     userId: string,
-    data: HealthRecordUpdateInput,
-  ): Promise<any> {
+    data: HealthRecordUpdateSchemaInput,
+  ): Promise<HealthRecordResponse> {
     const record = await this.healthRecordRepository.findById(id);
     if (!record) {
       throw new NotFoundError("Health record not found");
@@ -58,20 +68,11 @@ export class HealthRecordService {
       );
     }
 
-    const updateData: any = { ...data };
-    if (data.date !== undefined && data.date !== null && data.date !== "") {
-      updateData.date = new Date(data.date);
-    }
-    if (
-      data.nextDueDate !== undefined &&
-      data.nextDueDate !== null &&
-      data.nextDueDate !== ""
-    ) {
-      updateData.nextDueDate = new Date(data.nextDueDate);
-    }
-    if (data.nextDueDate) {
-      updateData.nextDueDate = new Date(data.nextDueDate);
-    }
+    const updateData: HealthRecordUpdateEntityInput = {
+      ...data,
+      date: data.date ? new Date(data.date) : undefined,
+      nextDueDate: data.nextDueDate ? new Date(data.nextDueDate) : undefined,
+    };
 
     const updated = await this.healthRecordRepository.update(id, updateData);
 
@@ -93,7 +94,7 @@ export class HealthRecordService {
     await this.healthRecordRepository.delete(id);
   }
 
-  async getById(id: string, userId: string): Promise<any> {
+  async getById(id: string, userId: string): Promise<HealthRecordResponse> {
     const record = await this.healthRecordRepository.findById(id);
     if (!record) {
       throw new NotFoundError("Health record not found");
@@ -111,9 +112,9 @@ export class HealthRecordService {
   async getAll(
     userId: string,
     animalId?: string,
-    type?: string,
+    type?: HealthType,
     completed?: boolean,
-  ): Promise<{ records: any[] }> {
+  ): Promise<{ records: HealthRecordResponse[] }> {
     if (animalId) {
       const animal = await this.animalRepository.findById(animalId);
       if (!animal || animal.userId !== userId) {
@@ -121,53 +122,58 @@ export class HealthRecordService {
           "You do not have permission to view these health records",
         );
       }
-      const records =
-        await this.healthRecordRepository.findByAnimalId(animalId);
-      return { records: records.map((r) => this.mapToResponse(r)) };
+      const records = await this.healthRecordRepository.findByAnimalId(animalId);
+      return { records: records.map((record) => this.mapToResponse(record)) };
     }
 
     if (type) {
-      const records = await this.healthRecordRepository.findByType(
-        userId,
-        type,
-      );
-      return { records: records.map((r) => this.mapToResponse(r)) };
+      const records = await this.healthRecordRepository.findByType(userId, type);
+      return { records: records.map((record) => this.mapToResponse(record)) };
     }
 
     if (completed !== undefined) {
       const records = completed
         ? await this.healthRecordRepository.findCompleted(userId)
         : await this.healthRecordRepository.findPending(userId);
-      return { records: records.map((r) => this.mapToResponse(r)) };
+      return { records: records.map((record) => this.mapToResponse(record)) };
     }
 
     const records = await this.healthRecordRepository.findAllByUserId(userId);
-    return { records: records.map((r) => this.mapToResponse(r)) };
+    return { records: records.map((record) => this.mapToResponse(record)) };
   }
 
-  async getUpcomingTasks(userId: string, daysAhead?: number) {
-    const tasks = await this.healthRecordRepository.findUpcoming(
-      userId,
-      daysAhead,
-    );
+  async getUpcomingTasks(
+    userId: string,
+    daysAhead?: number,
+  ): Promise<{ tasks: UpcomingTaskResponse[] }> {
+    const tasks = await this.healthRecordRepository.findUpcoming(userId, daysAhead);
     return {
-      tasks: tasks.map((t) => ({
-        id: t.id,
-        animalId: t.animalId,
-        animalCrotal: t.animalCrotal,
-        type: t.type,
-        dueDate: t.dueDate.toISOString(),
-        daysUntilDue: t.daysUntilDue,
-        notes: t.notes,
+      tasks: tasks.map((task) => ({
+        id: task.id,
+        animalId: task.animalId,
+        animalCrotal: task.animalCrotal,
+        type: task.type,
+        dueDate: task.dueDate.toISOString(),
+        daysUntilDue: task.daysUntilDue,
+        notes: task.notes ?? null,
       })),
     };
   }
 
-  private mapToResponse(record: any) {
+  private mapToResponse(record: HealthRecord): HealthRecordResponse {
     return {
       id: record.id,
       animalId: record.animalId,
-      animal: record.animal,
+      animal: record.animal
+        ? {
+            id: record.animal.id,
+            crotal: record.animal.crotal,
+            sex: record.animal.sex,
+            species: record.animal.species,
+            birthDate: record.animal.birthDate?.toISOString() || null,
+            isFounder: record.animal.isFounder,
+          }
+        : null,
       type: record.type,
       date: record.date.toISOString(),
       notes: record.notes || null,

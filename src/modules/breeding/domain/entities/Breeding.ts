@@ -1,3 +1,5 @@
+import { Animal } from "../../../animal/domain/entities/Animal";
+
 export enum RiskLevel {
   GREEN = "GREEN",
   YELLOW = "YELLOW",
@@ -18,7 +20,7 @@ export interface Breeding {
   projectedCOI: number;
   riskLevel: RiskLevel;
   offspringId?: string;
-  offspring?: any;
+  offspring?: Animal;
   breedingDate?: Date;
   notes?: string;
   userId: string;

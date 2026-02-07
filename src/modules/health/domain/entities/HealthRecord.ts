@@ -1,3 +1,5 @@
+import { Animal } from "../../../animal/domain/entities/Animal";
+
 export enum HealthType {
   VACCINATION = "VACCINATION",
   DEWORMING = "DEWORMING",
@@ -16,7 +18,7 @@ export enum SyncStatus {
 export interface HealthRecord {
   id: string;
   animalId: string;
-  animal?: any;
+  animal?: Animal;
   type: HealthType;
   date: Date;
   notes?: string;

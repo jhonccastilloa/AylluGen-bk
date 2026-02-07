@@ -1,3 +1,5 @@
+import { Animal } from "../../../animal/domain/entities/Animal";
+
 export enum ProductionType {
   WEIGHT = "WEIGHT",
   WOOL = "WOOL",
@@ -16,7 +18,7 @@ export enum SyncStatus {
 export interface ProductionRecord {
   id: string;
   animalId: string;
-  animal?: any;
+  animal?: Animal;
   type: ProductionType;
   date: Date;
   value: number;

@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { ProductionType } from "../../domain/entities/ProductionRecord";
+import { Sex, Species } from "../../../animal/domain/entities/Animal";
+
+const animalRelationSchema = z.object({
+  id: z.uuid(),
+  crotal: z.string(),
+  sex: z.enum(Sex),
+  species: z.enum(Species),
+  birthDate: z.iso.datetime().nullable(),
+  isFounder: z.boolean(),
+});
 
 export const productionRecordCreateSchema = z
   .object({
@@ -57,7 +67,7 @@ export const productionRecordResponseSchema = z
   .object({
     id: z.uuid(),
     animalId: z.uuid(),
-    animal: z.any().nullable(),
+    animal: animalRelationSchema.nullable(),
     type: z.enum(ProductionType),
     date: z.iso.datetime(),
     value: z.number(),

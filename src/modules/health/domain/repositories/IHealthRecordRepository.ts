@@ -1,4 +1,5 @@
 import {
+  HealthType,
   HealthRecord,
   HealthRecordCreateInput,
   HealthRecordUpdateInput,
@@ -9,7 +10,7 @@ export interface IHealthRecordRepository {
   findById(id: string): Promise<HealthRecord | null>;
   findAllByUserId(userId: string): Promise<HealthRecord[]>;
   findByAnimalId(animalId: string): Promise<HealthRecord[]>;
-  findByType(userId: string, type: string): Promise<HealthRecord[]>;
+  findByType(userId: string, type: HealthType): Promise<HealthRecord[]>;
   findUpcoming(
     userId: string,
     daysAhead?: number,

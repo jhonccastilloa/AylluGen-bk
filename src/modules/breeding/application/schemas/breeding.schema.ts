@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { RiskLevel } from "../../domain/entities/Breeding";
+import { Sex, Species } from "../../../animal/domain/entities/Animal";
+
+const animalRelationSchema = z.object({
+  id: z.string().uuid(),
+  crotal: z.string(),
+  sex: z.enum(Sex),
+  species: z.enum(Species),
+  birthDate: z.string().datetime().nullable(),
+  isFounder: z.boolean(),
+});
 
 export const breedingCreateSchema = z
   .object({
@@ -76,7 +86,7 @@ export const breedingResponseSchema = z
     projectedCOI: z.number(),
     riskLevel: z.nativeEnum(RiskLevel),
     offspringId: z.string().uuid().nullable(),
-    offspring: z.any().nullable(),
+    offspring: animalRelationSchema.nullable(),
     breedingDate: z.string().datetime().nullable(),
     notes: z.string().nullable(),
     userId: z.string().uuid(),

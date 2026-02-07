@@ -1,5 +1,10 @@
-import { Sex } from "@infrastructure/database/prisma/generated/enums";
-import { Animal, AnimalCreateDTO, AnimalUpdateDTO } from "../entities/Animal";
+import {
+  Animal,
+  AnimalCreateDTO,
+  AnimalUpdateDTO,
+  Sex,
+  Species,
+} from "../entities/Animal";
 
 export interface IAnimalRepository {
   findById(id: string): Promise<Animal | null>;
@@ -13,7 +18,7 @@ export interface IAnimalRepository {
     animalId: string,
   ): Promise<{ father?: Animal; mother?: Animal } | null>;
   findChildren(animalId: string): Promise<Animal[]>;
-  findBySpecies(userId: string, species: string): Promise<Animal[]>;
+  findBySpecies(userId: string, species: Species): Promise<Animal[]>;
   findBySex(userId: string, sex: Sex): Promise<Animal[]>;
   findFounders(userId: string): Promise<Animal[]>;
 }

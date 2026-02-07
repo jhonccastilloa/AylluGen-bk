@@ -4,6 +4,7 @@ import { TYPES } from "../../../../shared/di/types";
 import {
   AnimalCreateInput,
   AnimalQueryInput,
+  AnimalResponse,
   AnimalUpdateInput,
 } from "../schemas/animal.schema";
 import {
@@ -11,27 +12,12 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../../../shared/errors/AppError";
-import { AnimalCreateDTO } from "../../domain/entities/Animal";
-
-export type AnimalResponse = {
-  id: string;
-  crotal: string;
-  sex: string;
-  species: string;
-  birthDate: string | null;
-  isFounder: boolean;
-  fatherId: string | null;
-  motherId: string | null;
-  father?: any;
-  mother?: any;
-  children?: any[];
-  userId: string;
-  syncStatus: string;
-  syncVersion: number;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-};
+import {
+  Animal,
+  AnimalCreateDTO,
+  AnimalUpdateDTO,
+  Sex,
+} from "../../domain/entities/Animal";
 
 @injectable()
 export class AnimalService {
@@ -91,10 +77,10 @@ export class AnimalService {
         "No tienes permiso para actualizar este animal",
       );
     }
-    const updateData = {
+    const updateData: AnimalUpdateDTO = {
       ...data,
-      birthDate: animal.birthDate ? new Date(animal.birthDate) : undefined,
-    } as any;
+      birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+    };
 
     const updated = await this.animalRepository.update(id, updateData);
 
@@ -183,20 +169,20 @@ export class AnimalService {
 
   async getFounders(userId: string): Promise<AnimalResponse[]> {
     const founders = await this.animalRepository.findFounders(userId);
-    return founders.map(this.mapToResponse);
+    return founders.map((founder) => this.mapToResponse(founder));
   }
 
   async getMales(userId: string): Promise<AnimalResponse[]> {
-    const males = await this.animalRepository.findBySex(userId, "MALE");
-    return males.map(this.mapToResponse);
+    const males = await this.animalRepository.findBySex(userId, Sex.MALE);
+    return males.map((male) => this.mapToResponse(male));
   }
 
   async getFemales(userId: string): Promise<AnimalResponse[]> {
-    const females = await this.animalRepository.findBySex(userId, "FEMALE");
-    return females.map(this.mapToResponse);
+    const females = await this.animalRepository.findBySex(userId, Sex.FEMALE);
+    return females.map((female) => this.mapToResponse(female));
   }
 
-  private mapToResponse(animal: any): AnimalResponse {
+  private mapToResponse(animal: Animal): AnimalResponse {
     return {
       id: animal.id,
       crotal: animal.crotal,
@@ -208,7 +194,7 @@ export class AnimalService {
       motherId: animal.motherId || null,
       father: animal.father ? this.mapToResponse(animal.father) : undefined,
       mother: animal.mother ? this.mapToResponse(animal.mother) : undefined,
-      children: animal.children?.map((c: any) => this.mapToResponse(c)) || [],
+      children: animal.children?.map((child) => this.mapToResponse(child)) || [],
       userId: animal.userId,
       syncStatus: animal.syncStatus,
       syncVersion: animal.syncVersion,

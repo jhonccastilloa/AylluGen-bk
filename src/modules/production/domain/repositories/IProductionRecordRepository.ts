@@ -1,4 +1,5 @@
 import {
+  ProductionType,
   ProductionRecord,
   ProductionRecordCreateInput,
   ProductionRecordUpdateInput,
@@ -9,7 +10,7 @@ export interface IProductionRecordRepository {
   findById(id: string): Promise<ProductionRecord | null>;
   findAllByUserId(userId: string): Promise<ProductionRecord[]>;
   findByAnimalId(animalId: string): Promise<ProductionRecord[]>;
-  findByType(userId: string, type: string): Promise<ProductionRecord[]>;
+  findByType(userId: string, type: ProductionType): Promise<ProductionRecord[]>;
   create(data: ProductionRecordCreateInput): Promise<ProductionRecord>;
   update(
     id: string,
@@ -22,6 +23,6 @@ export interface IProductionRecordRepository {
   ): Promise<ProductionRecord[]>;
   calculateSummary(
     animalId: string,
-    type: string,
+    type: ProductionType,
   ): Promise<ProductionSummary | null>;
 }

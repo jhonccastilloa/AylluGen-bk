@@ -5,8 +5,24 @@ import {
   ProductionRecordCreateInput,
   ProductionRecordUpdateInput,
   ProductionSummary,
+  ProductionType,
+  SyncStatus,
 } from "../../../production/domain/entities/ProductionRecord";
 import { IProductionRecordRepository } from "../../../production/domain/repositories/IProductionRecordRepository";
+import {
+  Animal,
+  Sex,
+  Species,
+  SyncStatus as AnimalSyncStatus,
+} from "../../../animal/domain/entities/Animal";
+import type {
+  Animal as PrismaAnimal,
+  ProductionRecord as PrismaProductionRecord,
+} from "@infrastructure/database/prisma/generated/client";
+
+type ProductionRecordWithAnimal = PrismaProductionRecord & {
+  animal?: PrismaAnimal | null;
+};
 
 @injectable()
 export class ProductionRecordRepository implements IProductionRecordRepository {
@@ -26,7 +42,7 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
       orderBy: { date: "desc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
   async findByAnimalId(animalId: string): Promise<ProductionRecord[]> {
@@ -36,17 +52,20 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
       orderBy: { date: "desc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
-  async findByType(userId: string, type: string): Promise<ProductionRecord[]> {
+  async findByType(
+    userId: string,
+    type: ProductionType,
+  ): Promise<ProductionRecord[]> {
     const records = await prisma.productionRecord.findMany({
-      where: { userId, type: type as any },
+      where: { userId, type },
       include: { animal: true },
       orderBy: { date: "desc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
   async create(data: ProductionRecordCreateInput): Promise<ProductionRecord> {
@@ -86,41 +105,45 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
       take: limit,
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
   async calculateSummary(
     animalId: string,
-    type: string,
+    type: ProductionType,
   ): Promise<ProductionSummary | null> {
     const records = await prisma.productionRecord.findMany({
-      where: { animalId, type: type as any },
+      where: { animalId, type },
       orderBy: { date: "asc" },
     });
 
-    if (records.length === 0) return null;
+    if (records.length === 0) {
+      return null;
+    }
 
     const animal = await prisma.animal.findUnique({ where: { id: animalId } });
-    if (!animal) return null;
+    if (!animal) {
+      return null;
+    }
 
-    const values = records.map((r) => r.value);
-    const averageValue = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const values = records.map((record) => record.value);
+    const averageValue = values.reduce((sum, value) => sum + value, 0) / values.length;
 
     const qualityScores = records
-      .filter((r) => r.qualityScore !== null)
-      .map((r) => r.qualityScore!);
+      .filter((record) => record.qualityScore !== null)
+      .map((record) => record.qualityScore as number);
     const averageQualityScore =
       qualityScores.length > 0
-        ? qualityScores.reduce((sum, s) => sum + s, 0) / qualityScores.length
+        ? qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length
         : null;
 
     const half = Math.floor(values.length / 2);
     const recentValues = values.slice(-half);
     const olderValues = values.slice(0, half);
     const recentAvg =
-      recentValues.reduce((sum, v) => sum + v, 0) / recentValues.length;
+      recentValues.reduce((sum, value) => sum + value, 0) / recentValues.length;
     const olderAvg =
-      olderValues.reduce((sum, v) => sum + v, 0) / olderValues.length;
+      olderValues.reduce((sum, value) => sum + value, 0) / olderValues.length;
 
     let trend: "improving" | "stable" | "declining" = "stable";
     const diff = recentAvg - olderAvg;
@@ -135,7 +158,7 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
     return {
       animalId,
       animalCrotal: animal.crotal,
-      type: type as any,
+      type,
       totalRecords: records.length,
       averageValue,
       averageQualityScore,
@@ -144,22 +167,41 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
     };
   }
 
-  private mapToEntity(data: any): ProductionRecord {
+  private mapToEntity(data: ProductionRecordWithAnimal): ProductionRecord {
     return {
       id: data.id,
       animalId: data.animalId,
-      animal: data.animal,
-      type: data.type,
+      animal: data.animal ? this.mapAnimalToEntity(data.animal) : undefined,
+      type: data.type as ProductionType,
       date: data.date,
       value: data.value,
       unit: data.unit,
-      qualityScore: data.qualityScore,
-      notes: data.notes,
+      qualityScore: data.qualityScore ?? undefined,
+      notes: data.notes ?? undefined,
       userId: data.userId,
-      syncStatus: data.syncStatus,
+      syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+    };
+  }
+
+  private mapAnimalToEntity(data: PrismaAnimal): Animal {
+    return {
+      id: data.id,
+      crotal: data.crotal,
+      sex: data.sex as Sex,
+      species: data.species as Species,
+      birthDate: data.birthDate ?? undefined,
+      isFounder: data.isFounder,
+      fatherId: data.fatherId ?? undefined,
+      motherId: data.motherId ?? undefined,
+      userId: data.userId,
+      syncStatus: data.syncStatus as AnimalSyncStatus,
+      syncVersion: data.syncVersion,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      deletedAt: data.deletedAt ?? undefined,
     };
   }
 }

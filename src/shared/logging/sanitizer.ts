@@ -3,6 +3,19 @@ import { loggerConfig } from "./logger.config";
 const MAX_DEPTH = 10;
 const MAX_ARRAY_LENGTH = 100;
 
+type SanitizedValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | SanitizedValue[]
+  | SanitizedObject;
+
+interface SanitizedObject {
+  [key: string]: SanitizedValue;
+}
+
 function isSensitiveKey(key: string): boolean {
   const normalizedKey = key.toLowerCase();
   return loggerConfig.sanitization.sensitiveKeys.some((sensitiveKey) =>
@@ -10,7 +23,7 @@ function isSensitiveKey(key: string): boolean {
   );
 }
 
-export function sanitize(obj: any, depth = 0): any {
+export function sanitize(obj: unknown, depth = 0): SanitizedValue {
   if (depth > MAX_DEPTH) {
     return "[MAX_DEPTH_REACHED]";
   }
@@ -40,25 +53,29 @@ export function sanitize(obj: any, depth = 0): any {
   }
 
   if (Array.isArray(obj)) {
+    const sanitizedItems = obj.map((item) => sanitize(item, depth + 1));
+
     if (obj.length > MAX_ARRAY_LENGTH) {
-      return sanitize(obj.slice(0, MAX_ARRAY_LENGTH), depth + 1).concat(
+      return sanitizedItems.slice(0, MAX_ARRAY_LENGTH).concat(
         `[...${obj.length - MAX_ARRAY_LENGTH} more items]`,
       );
     }
-    return obj.map((item) => sanitize(item, depth + 1));
+
+    return sanitizedItems;
   }
 
   if (typeof obj === "object") {
-    const sanitized: Record<string, any> = {};
-    for (const key in obj) {
-      if (Object.hasOwnProperty.bind(obj)(key)) {
-        if (isSensitiveKey(key)) {
-          sanitized[key] = loggerConfig.sanitization.replacement;
-        } else {
-          sanitized[key] = sanitize(obj[key], depth + 1);
-        }
+    const sanitized: SanitizedObject = {};
+    const input = obj as Record<string, unknown>;
+
+    for (const key of Object.keys(input)) {
+      if (isSensitiveKey(key)) {
+        sanitized[key] = loggerConfig.sanitization.replacement;
+      } else {
+        sanitized[key] = sanitize(input[key], depth + 1);
       }
     }
+
     return sanitized;
   }
 

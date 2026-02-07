@@ -4,8 +4,21 @@ import {
   Animal,
   AnimalCreateDTO,
   AnimalUpdateDTO,
+  Sex,
+  Species,
+  SyncStatus,
 } from "../../../animal/domain/entities/Animal";
-import { IAnimalRepository } from "../../../animal/domain/repositories/IAnimalRepository";
+import type {
+  Animal as PrismaAnimal,
+} from "@infrastructure/database/prisma/generated/client";
+import {
+  IAnimalRepository,
+} from "../../../animal/domain/repositories/IAnimalRepository";
+
+type AnimalWithRelations = PrismaAnimal & {
+  father?: PrismaAnimal | null;
+  mother?: PrismaAnimal | null;
+};
 
 @injectable()
 export class AnimalRepository implements IAnimalRepository {
@@ -95,17 +108,17 @@ export class AnimalRepository implements IAnimalRepository {
     return children.map((c) => this.mapToEntity(c));
   }
 
-  async findBySpecies(userId: string, species: string): Promise<Animal[]> {
+  async findBySpecies(userId: string, species: Species): Promise<Animal[]> {
     const animals = await prisma.animal.findMany({
-      where: { userId, species: species as any, deletedAt: null },
+      where: { userId, species, deletedAt: null },
     });
 
     return animals.map((a) => this.mapToEntity(a));
   }
 
-  async findBySex(userId: string, sex: string): Promise<Animal[]> {
+  async findBySex(userId: string, sex: Sex): Promise<Animal[]> {
     const animals = await prisma.animal.findMany({
-      where: { userId, sex: sex as any, deletedAt: null },
+      where: { userId, sex, deletedAt: null },
     });
 
     return animals.map((a) => this.mapToEntity(a));
@@ -119,25 +132,25 @@ export class AnimalRepository implements IAnimalRepository {
     return animals.map((a) => this.mapToEntity(a));
   }
 
-  private mapToEntity(data: any): Animal {
+  private mapToEntity(data: AnimalWithRelations): Animal {
     return {
       id: data.id,
       crotal: data.crotal,
-      sex: data.sex,
-      species: data.species,
-      birthDate: data.birthDate,
+      sex: data.sex as Sex,
+      species: data.species as Species,
+      birthDate: data.birthDate ?? undefined,
       isFounder: data.isFounder,
-      fatherId: data.fatherId,
-      motherId: data.motherId,
+      fatherId: data.fatherId ?? undefined,
+      motherId: data.motherId ?? undefined,
       father: data.father ? this.mapToEntity(data.father) : undefined,
       mother: data.mother ? this.mapToEntity(data.mother) : undefined,
       children: undefined,
       userId: data.userId,
-      syncStatus: data.syncStatus,
+      syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
-      deletedAt: data.deletedAt,
+      deletedAt: data.deletedAt ?? undefined,
     };
   }
 }

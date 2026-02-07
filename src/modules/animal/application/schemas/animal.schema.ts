@@ -81,6 +81,15 @@ export const animalQuerySchema = z
     },
   });
 
+const animalRelationSchema = z.object({
+  id: z.string().uuid(),
+  crotal: z.string(),
+  sex: z.enum(Sex),
+  species: z.enum(Species),
+  birthDate: z.string().datetime().nullable(),
+  isFounder: z.boolean(),
+});
+
 export const animalResponseSchema = z
   .object({
     id: z.string().uuid(),
@@ -91,9 +100,9 @@ export const animalResponseSchema = z
     isFounder: z.boolean(),
     fatherId: z.string().uuid().nullable(),
     motherId: z.string().uuid().nullable(),
-    father: z.any().nullable(),
-    mother: z.any().nullable(),
-    children: z.array(z.any()).optional(),
+    father: animalRelationSchema.nullable().optional(),
+    mother: animalRelationSchema.nullable().optional(),
+    children: z.array(animalRelationSchema).optional(),
     userId: z.string().uuid(),
     syncStatus: z.enum(["SYNCED", "PENDING", "CONFLICT", "DELETED"]),
     syncVersion: z.number(),

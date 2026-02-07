@@ -4,9 +4,25 @@ import {
   HealthRecord,
   HealthRecordCreateInput,
   HealthRecordUpdateInput,
+  HealthType,
+  SyncStatus,
   UpcomingHealthTask,
 } from "../../../health/domain/entities/HealthRecord";
 import { IHealthRecordRepository } from "../../../health/domain/repositories/IHealthRecordRepository";
+import {
+  Animal,
+  Sex,
+  Species,
+  SyncStatus as AnimalSyncStatus,
+} from "../../../animal/domain/entities/Animal";
+import type {
+  Animal as PrismaAnimal,
+  HealthRecord as PrismaHealthRecord,
+} from "@infrastructure/database/prisma/generated/client";
+
+type HealthRecordWithAnimal = PrismaHealthRecord & {
+  animal?: PrismaAnimal | null;
+};
 
 @injectable()
 export class HealthRecordRepository implements IHealthRecordRepository {
@@ -26,7 +42,7 @@ export class HealthRecordRepository implements IHealthRecordRepository {
       orderBy: { date: "desc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
   async findByAnimalId(animalId: string): Promise<HealthRecord[]> {
@@ -36,17 +52,17 @@ export class HealthRecordRepository implements IHealthRecordRepository {
       orderBy: { date: "desc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
-  async findByType(userId: string, type: string): Promise<HealthRecord[]> {
+  async findByType(userId: string, type: HealthType): Promise<HealthRecord[]> {
     const records = await prisma.healthRecord.findMany({
-      where: { userId, type: type as any },
+      where: { userId, type },
       include: { animal: true },
       orderBy: { date: "desc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
   async findUpcoming(
@@ -65,20 +81,27 @@ export class HealthRecordRepository implements IHealthRecordRepository {
       orderBy: { nextDueDate: "asc" },
     });
 
-    return records.map((r) => {
-      const daysUntil = Math.ceil(
-        (r.nextDueDate!.getTime() - now.getTime()) / (24 * 60 * 60 * 1000),
-      );
-      return {
-        id: r.id,
-        animalId: r.animalId,
-        animalCrotal: r.animal.crotal,
-        type: r.type as any,
-        dueDate: r.nextDueDate!,
-        daysUntilDue: daysUntil,
-        notes: r.notes,
-      };
-    }) as any[];
+    return records
+      .map((record): UpcomingHealthTask | null => {
+        if (!record.nextDueDate) {
+          return null;
+        }
+
+        const daysUntil = Math.ceil(
+          (record.nextDueDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000),
+        );
+
+        return {
+          id: record.id,
+          animalId: record.animalId,
+          animalCrotal: record.animal.crotal,
+          type: record.type as HealthType,
+          dueDate: record.nextDueDate,
+          daysUntilDue: daysUntil,
+          notes: record.notes ?? undefined,
+        };
+      })
+      .filter((task): task is UpcomingHealthTask => task !== null);
   }
 
   async create(data: HealthRecordCreateInput): Promise<HealthRecord> {
@@ -114,7 +137,7 @@ export class HealthRecordRepository implements IHealthRecordRepository {
       orderBy: { date: "desc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
   async findPending(userId: string): Promise<HealthRecord[]> {
@@ -124,24 +147,43 @@ export class HealthRecordRepository implements IHealthRecordRepository {
       orderBy: { date: "asc" },
     });
 
-    return records.map((r) => this.mapToEntity(r));
+    return records.map((record) => this.mapToEntity(record));
   }
 
-  private mapToEntity(data: any): HealthRecord {
+  private mapToEntity(data: HealthRecordWithAnimal): HealthRecord {
     return {
       id: data.id,
       animalId: data.animalId,
-      animal: data.animal,
-      type: data.type,
+      animal: data.animal ? this.mapAnimalToEntity(data.animal) : undefined,
+      type: data.type as HealthType,
       date: data.date,
-      notes: data.notes,
-      nextDueDate: data.nextDueDate,
+      notes: data.notes ?? undefined,
+      nextDueDate: data.nextDueDate ?? undefined,
       completed: data.completed,
       userId: data.userId,
-      syncStatus: data.syncStatus,
+      syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+    };
+  }
+
+  private mapAnimalToEntity(data: PrismaAnimal): Animal {
+    return {
+      id: data.id,
+      crotal: data.crotal,
+      sex: data.sex as Sex,
+      species: data.species as Species,
+      birthDate: data.birthDate ?? undefined,
+      isFounder: data.isFounder,
+      fatherId: data.fatherId ?? undefined,
+      motherId: data.motherId ?? undefined,
+      userId: data.userId,
+      syncStatus: data.syncStatus as AnimalSyncStatus,
+      syncVersion: data.syncVersion,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      deletedAt: data.deletedAt ?? undefined,
     };
   }
 }
