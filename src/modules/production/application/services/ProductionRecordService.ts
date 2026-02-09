@@ -10,7 +10,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../../../shared/errors/AppError";
-import { ProductionType } from "@infrastructure/database/prisma/generated/enums";
+import { ProductionType } from "../../domain/entities/ProductionRecord";
 
 @injectable()
 export class ProductionRecordService {

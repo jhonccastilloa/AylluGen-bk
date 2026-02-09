@@ -67,7 +67,7 @@ export const animalQuerySchema = z
     sex: z.enum(Sex).optional().describe("Filter by sex"),
     isFounder: z.boolean().optional().describe("Filter by founder status"),
     search: z.string().optional().describe("Search by crotal"),
-    limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+    limit: z.coerce.number().int().min(1).optional().default(50),
     offset: z.coerce.number().int().min(0).optional().default(0),
   })
   .openapi({

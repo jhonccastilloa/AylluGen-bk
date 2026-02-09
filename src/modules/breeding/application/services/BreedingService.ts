@@ -225,7 +225,16 @@ export class BreedingService {
       projectedCOI: breeding.projectedCOI,
       riskLevel: breeding.riskLevel,
       offspringId: breeding.offspringId || null,
-      offspring: breeding.offspring || null,
+      offspring: breeding.offspring
+        ? {
+            id: breeding.offspring.id,
+            crotal: breeding.offspring.crotal,
+            sex: breeding.offspring.sex,
+            species: breeding.offspring.species,
+            birthDate: breeding.offspring.birthDate?.toISOString() || null,
+            isFounder: breeding.offspring.isFounder,
+          }
+        : null,
       breedingDate: breeding.breedingDate?.toISOString() || null,
       notes: breeding.notes || null,
       userId: breeding.userId,
