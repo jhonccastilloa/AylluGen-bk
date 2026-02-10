@@ -177,7 +177,7 @@ export class SyncService {
   ): Promise<any[]> {
     const table = this.getPrismaTable(tableName);
 
-    const whereClause: any = { userId, deletedAt: null };
+    const whereClause: any = { userId };
 
     if (lastSyncAt) {
       whereClause.updatedAt = { gte: lastSyncAt };
