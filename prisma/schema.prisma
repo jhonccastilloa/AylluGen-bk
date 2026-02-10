@@ -13,6 +13,7 @@ model User {
   password          String
   refreshToken      RefreshToken[]
   animals           Animal[]
+  speciesCatalog    Species[]
   breedings         Breeding[]
   healthRecords     HealthRecord[]
   productionRecords ProductionRecord[]
@@ -37,7 +38,8 @@ model Animal {
   id                String             @id @default(uuid())
   crotal            String
   sex               Sex
-  species           Species
+  speciesId         String
+  speciesCatalog    Species            @relation(fields: [speciesId], references: [id], onDelete: Restrict)
   birthDate         DateTime?
   isFounder         Boolean            @default(false)
   fatherId          String?
@@ -59,7 +61,26 @@ model Animal {
 
   @@unique([userId, crotal])
   @@index([userId])
+  @@index([speciesId])
   @@map("animals")
+}
+
+model Species {
+  id          String   @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  animals     Animal[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@unique([userId, code])
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("species")
 }
 
 model Breeding {
@@ -150,13 +171,6 @@ model SyncLog {
 enum Sex {
   MALE
   FEMALE
-}
-
-enum Species {
-  SHEEP
-  ALPACA
-  LLAMA
-  VICUGNA
 }
 
 enum RiskLevel {

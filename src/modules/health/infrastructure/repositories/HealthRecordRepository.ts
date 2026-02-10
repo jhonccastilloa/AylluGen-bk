@@ -12,57 +12,50 @@ import { IHealthRecordRepository } from "../../../health/domain/repositories/IHe
 import {
   Animal,
   Sex,
-  Species,
   SyncStatus as AnimalSyncStatus,
 } from "../../../animal/domain/entities/Animal";
-import type {
-  Animal as PrismaAnimal,
-  HealthRecord as PrismaHealthRecord,
-} from "@infrastructure/database/prisma/generated/client";
 
-type HealthRecordWithAnimal = PrismaHealthRecord & {
-  animal?: PrismaAnimal | null;
-};
+type HealthRecordWithAnimal = any;
 
 @injectable()
 export class HealthRecordRepository implements IHealthRecordRepository {
   async findById(id: string): Promise<HealthRecord | null> {
-    const record = await prisma.healthRecord.findUnique({
+    const record = await (prisma.healthRecord as any).findUnique({
       where: { id },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
     });
 
     return record ? this.mapToEntity(record) : null;
   }
 
   async findAllByUserId(userId: string): Promise<HealthRecord[]> {
-    const records = await prisma.healthRecord.findMany({
+    const records = await (prisma.healthRecord as any).findMany({
       where: { userId },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async findByAnimalId(animalId: string): Promise<HealthRecord[]> {
-    const records = await prisma.healthRecord.findMany({
+    const records = await (prisma.healthRecord as any).findMany({
       where: { animalId },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async findByType(userId: string, type: HealthType): Promise<HealthRecord[]> {
-    const records = await prisma.healthRecord.findMany({
+    const records = await (prisma.healthRecord as any).findMany({
       where: { userId, type },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async findUpcoming(
@@ -72,17 +65,18 @@ export class HealthRecordRepository implements IHealthRecordRepository {
     const now = new Date();
     const future = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 
-    const records = await prisma.healthRecord.findMany({
+    const healthRecordClient = prisma.healthRecord as any;
+    const records = await healthRecordClient.findMany({
       where: {
         userId,
         nextDueDate: { gte: now, lte: future },
       },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { nextDueDate: "asc" },
     });
 
     return records
-      .map((record): UpcomingHealthTask | null => {
+      .map((record: any): UpcomingHealthTask | null => {
         if (!record.nextDueDate) {
           return null;
         }
@@ -101,13 +95,13 @@ export class HealthRecordRepository implements IHealthRecordRepository {
           notes: record.notes ?? undefined,
         };
       })
-      .filter((task): task is UpcomingHealthTask => task !== null);
+      .filter((task: any): task is UpcomingHealthTask => task !== null);
   }
 
   async create(data: HealthRecordCreateInput): Promise<HealthRecord> {
-    const record = await prisma.healthRecord.create({
+    const record = await (prisma.healthRecord as any).create({
       data,
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
     });
 
     return this.mapToEntity(record);
@@ -117,37 +111,37 @@ export class HealthRecordRepository implements IHealthRecordRepository {
     id: string,
     data: HealthRecordUpdateInput,
   ): Promise<HealthRecord> {
-    const record = await prisma.healthRecord.update({
+    const record = await (prisma.healthRecord as any).update({
       where: { id },
       data: { ...data, syncVersion: { increment: 1 } },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
     });
 
     return this.mapToEntity(record);
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.healthRecord.delete({ where: { id } });
+    await (prisma.healthRecord as any).delete({ where: { id } });
   }
 
   async findCompleted(userId: string): Promise<HealthRecord[]> {
-    const records = await prisma.healthRecord.findMany({
+    const records = await (prisma.healthRecord as any).findMany({
       where: { userId, completed: true },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async findPending(userId: string): Promise<HealthRecord[]> {
-    const records = await prisma.healthRecord.findMany({
+    const records = await (prisma.healthRecord as any).findMany({
       where: { userId, completed: false },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "asc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   private mapToEntity(data: HealthRecordWithAnimal): HealthRecord {
@@ -168,12 +162,14 @@ export class HealthRecordRepository implements IHealthRecordRepository {
     };
   }
 
-  private mapAnimalToEntity(data: PrismaAnimal): Animal {
+  private mapAnimalToEntity(data: any): Animal {
     return {
       id: data.id,
       crotal: data.crotal,
       sex: data.sex as Sex,
-      species: data.species as Species,
+      speciesId: data.speciesId,
+      species: data.speciesCatalog?.code ?? "",
+      speciesName: data.speciesCatalog?.name ?? undefined,
       birthDate: data.birthDate ?? undefined,
       isFounder: data.isFounder,
       fatherId: data.fatherId ?? undefined,

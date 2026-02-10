@@ -29,6 +29,9 @@ export const TYPES = {
   // Repositorios de Dominio - Sync Module
   ISyncRepository: Symbol("ISyncRepository"),
 
+  // Repositorios de Dominio - Species Module
+  ISpeciesRepository: Symbol("ISpeciesRepository"),
+
   // Servicios de Aplicación - Animal Module
   AnimalService: Symbol("AnimalService"),
 
@@ -44,6 +47,9 @@ export const TYPES = {
   // Servicios de Aplicación - Sync Module
   SyncService: Symbol("SyncService"),
 
+  // Servicios de Aplicación - Species Module
+  SpeciesService: Symbol("SpeciesService"),
+
   // Controladores - Animal Module
   AnimalController: Symbol("AnimalController"),
 
@@ -58,6 +64,9 @@ export const TYPES = {
 
   // Controladores - Sync Module
   SyncController: Symbol("SyncController"),
+
+  // Controladores - Species Module
+  SpeciesController: Symbol("SpeciesController"),
 
   // ============ MÁS MÓDULOS FUTUROS ============
   // Agrega aquí según vas creando nuevos módulos

@@ -41,7 +41,7 @@ export const syncPushSchema = z
           data: {
             crotal: "CR12345",
             sex: "FEMALE",
-            species: "SHEEP",
+            speciesCode: "SHEEP",
             isFounder: true,
           },
           clientVersion: 1,

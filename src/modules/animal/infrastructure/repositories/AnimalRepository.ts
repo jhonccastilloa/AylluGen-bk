@@ -5,63 +5,62 @@ import {
   AnimalCreateDTO,
   AnimalUpdateDTO,
   Sex,
-  Species,
+  SpeciesCode,
   SyncStatus,
 } from "../../../animal/domain/entities/Animal";
-import type {
-  Animal as PrismaAnimal,
-} from "@infrastructure/database/prisma/generated/client";
-import {
-  IAnimalRepository,
-} from "../../../animal/domain/repositories/IAnimalRepository";
+import { IAnimalRepository } from "../../../animal/domain/repositories/IAnimalRepository";
 
-type AnimalWithRelations = PrismaAnimal & {
-  father?: PrismaAnimal | null;
-  mother?: PrismaAnimal | null;
-};
+type AnimalWithRelations = any;
 
 @injectable()
 export class AnimalRepository implements IAnimalRepository {
   async findById(id: string): Promise<Animal | null> {
-    const animal = await prisma.animal.findUnique({
+    const animal = await (prisma.animal as any).findUnique({
       where: { id },
+      include: { speciesCatalog: true },
     });
     return animal ? this.mapToEntity(animal) : null;
   }
 
   async findByCrotal(crotal: string, userId: string): Promise<Animal | null> {
-    const animal = await prisma.animal.findFirst({
+    const animal = await (prisma.animal as any).findFirst({
       where: { userId, crotal },
+      include: { speciesCatalog: true },
     });
 
     return animal ? this.mapToEntity(animal) : null;
   }
 
-  async findAllByUserId(userId: string): Promise<Animal[]> {
-    const animals = await prisma.animal.findMany({
-      where: { userId, deletedAt: null },
+  async findAllByUserId(userId: string, includeDeleted = false): Promise<Animal[]> {
+    const animals = await (prisma.animal as any).findMany({
+      where: includeDeleted ? { userId } : { userId, deletedAt: null },
+      include: { speciesCatalog: true },
       orderBy: { createdAt: "desc" },
     });
 
-    return animals.map((a) => this.mapToEntity(a));
+    return animals.map((item: any) => this.mapToEntity(item));
   }
 
   async create(data: AnimalCreateDTO): Promise<Animal> {
-    const animal = await prisma.animal.create({ data });
+    const animal = await (prisma.animal as any).create({
+      data,
+      include: { speciesCatalog: true },
+    });
     return this.mapToEntity(animal);
   }
 
   async update(id: string, data: AnimalUpdateDTO): Promise<Animal> {
-    const animal = await prisma.animal.update({
+    const animal = await (prisma.animal as any).update({
       where: { id },
       data: { ...data, syncVersion: { increment: 1 } },
+      include: { speciesCatalog: true },
     });
 
     return this.mapToEntity(animal);
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.animal.update({
+    await (prisma.animal as any).update({
       where: { id },
       data: {
         deletedAt: new Date(),
@@ -72,11 +71,24 @@ export class AnimalRepository implements IAnimalRepository {
   }
 
   async findPedigree(animalId: string): Promise<Animal | null> {
-    const animal = await prisma.animal.findUnique({
+    const animal = await (prisma.animal as any).findUnique({
       where: { id: animalId },
       include: {
-        father: { include: { father: true, mother: true } },
-        mother: { include: { father: true, mother: true } },
+        speciesCatalog: true,
+        father: {
+          include: {
+            speciesCatalog: true,
+            father: { include: { speciesCatalog: true } },
+            mother: { include: { speciesCatalog: true } },
+          },
+        },
+        mother: {
+          include: {
+            speciesCatalog: true,
+            father: { include: { speciesCatalog: true } },
+            mother: { include: { speciesCatalog: true } },
+          },
+        },
       },
     });
 
@@ -86,9 +98,12 @@ export class AnimalRepository implements IAnimalRepository {
   async findParents(
     animalId: string,
   ): Promise<{ father?: Animal; mother?: Animal } | null> {
-    const animal = await prisma.animal.findUnique({
+    const animal = await (prisma.animal as any).findUnique({
       where: { id: animalId },
-      include: { father: true, mother: true },
+      include: {
+        father: { include: { speciesCatalog: true } },
+        mother: { include: { speciesCatalog: true } },
+      },
     });
 
     if (!animal) return null;
@@ -100,36 +115,45 @@ export class AnimalRepository implements IAnimalRepository {
   }
 
   async findChildren(animalId: string): Promise<Animal[]> {
-    const children = await prisma.animal.findMany({
+    const children = await (prisma.animal as any).findMany({
       where: { OR: [{ fatherId: animalId }, { motherId: animalId }] },
-      include: { father: true, mother: true },
+      include: { speciesCatalog: true },
     });
 
-    return children.map((c) => this.mapToEntity(c));
+    return children.map((item: any) => this.mapToEntity(item));
   }
 
-  async findBySpecies(userId: string, species: Species): Promise<Animal[]> {
-    const animals = await prisma.animal.findMany({
-      where: { userId, species, deletedAt: null },
+  async findBySpecies(userId: string, species: SpeciesCode): Promise<Animal[]> {
+    const animals = await (prisma.animal as any).findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        speciesCatalog: {
+          code: species,
+        },
+      },
+      include: { speciesCatalog: true },
     });
 
-    return animals.map((a) => this.mapToEntity(a));
+    return animals.map((item: any) => this.mapToEntity(item));
   }
 
   async findBySex(userId: string, sex: Sex): Promise<Animal[]> {
-    const animals = await prisma.animal.findMany({
+    const animals = await (prisma.animal as any).findMany({
       where: { userId, sex, deletedAt: null },
+      include: { speciesCatalog: true },
     });
 
-    return animals.map((a) => this.mapToEntity(a));
+    return animals.map((item: any) => this.mapToEntity(item));
   }
 
   async findFounders(userId: string): Promise<Animal[]> {
-    const animals = await prisma.animal.findMany({
+    const animals = await (prisma.animal as any).findMany({
       where: { userId, isFounder: true, deletedAt: null },
+      include: { speciesCatalog: true },
     });
 
-    return animals.map((a) => this.mapToEntity(a));
+    return animals.map((item: any) => this.mapToEntity(item));
   }
 
   private mapToEntity(data: AnimalWithRelations): Animal {
@@ -137,7 +161,9 @@ export class AnimalRepository implements IAnimalRepository {
       id: data.id,
       crotal: data.crotal,
       sex: data.sex as Sex,
-      species: data.species as Species,
+      speciesId: data.speciesId,
+      species: data.speciesCatalog?.code ?? "",
+      speciesName: data.speciesCatalog?.name ?? undefined,
       birthDate: data.birthDate ?? undefined,
       isFounder: data.isFounder,
       fatherId: data.fatherId ?? undefined,

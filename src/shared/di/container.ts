@@ -12,6 +12,7 @@ import { BreedingRepository } from "../../modules/breeding/infrastructure/reposi
 import { HealthRecordRepository } from "../../modules/health/infrastructure/repositories/HealthRecordRepository";
 import { ProductionRecordRepository } from "../../modules/production/infrastructure/repositories/ProductionRecordRepository";
 import { SyncRepository } from "../../modules/sync/infrastructure/repositories/SyncRepository";
+import { SpeciesRepository } from "../../modules/species/infrastructure/repositories/SpeciesRepository";
 
 // Importar servicios existentes
 import { AuthService } from "../../modules/auth/application/services/AuthService";
@@ -23,6 +24,7 @@ import { BreedingService } from "../../modules/breeding/application/services/Bre
 import { HealthRecordService } from "../../modules/health/application/services/HealthRecordService";
 import { ProductionRecordService } from "../../modules/production/application/services/ProductionRecordService";
 import { SyncService } from "../../modules/sync/application/services/SyncService";
+import { SpeciesService } from "../../modules/species/application/services/SpeciesService";
 
 // Importar controladores existentes
 import { AuthController } from "../../modules/auth/presentation/controllers/AuthController";
@@ -34,6 +36,7 @@ import { BreedingController } from "../../modules/breeding/presentation/controll
 import { HealthRecordController } from "../../modules/health/presentation/controllers/HealthRecordController";
 import { ProductionRecordController } from "../../modules/production/presentation/controllers/ProductionRecordController";
 import { SyncController } from "../../modules/sync/presentation/controllers/SyncController";
+import { SpeciesController } from "../../modules/species/presentation/controllers/SpeciesController";
 
 // Crear contenedor con alcance Singleton
 const container = new Container({ defaultScope: "Singleton" });
@@ -54,6 +57,7 @@ container
   .bind<ProductionRecordRepository>(TYPES.IProductionRecordRepository)
   .to(ProductionRecordRepository);
 container.bind<SyncRepository>(TYPES.ISyncRepository).to(SyncRepository);
+container.bind<SpeciesRepository>(TYPES.ISpeciesRepository).to(SpeciesRepository);
 
 // ============ BINDEOS DE SERVICIOS ============
 container.bind<AuthService>(TYPES.AuthService).to(AuthService);
@@ -67,6 +71,7 @@ container
   .bind<ProductionRecordService>(TYPES.ProductionRecordService)
   .to(ProductionRecordService);
 container.bind<SyncService>(TYPES.SyncService).to(SyncService);
+container.bind<SpeciesService>(TYPES.SpeciesService).to(SpeciesService);
 
 // ============ BINDEOS DE CONTROLADORES ============
 container.bind<AuthController>(TYPES.AuthController).to(AuthController);
@@ -82,5 +87,6 @@ container
   .bind<ProductionRecordController>(TYPES.ProductionRecordController)
   .to(ProductionRecordController);
 container.bind<SyncController>(TYPES.SyncController).to(SyncController);
+container.bind<SpeciesController>(TYPES.SpeciesController).to(SpeciesController);
 
 export { container, TYPES };

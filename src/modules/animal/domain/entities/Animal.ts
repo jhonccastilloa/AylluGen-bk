@@ -3,12 +3,7 @@ export enum Sex {
   FEMALE = "FEMALE",
 }
 
-export enum Species {
-  SHEEP = "SHEEP",
-  ALPACA = "ALPACA",
-  LLAMA = "LLAMA",
-  VICUGNA = "VICUGNA",
-}
+export type SpeciesCode = string;
 
 export enum SyncStatus {
   SYNCED = "SYNCED",
@@ -21,7 +16,9 @@ export interface Animal {
   id: string;
   crotal: string;
   sex: Sex;
-  species: Species;
+  speciesId: string;
+  species: SpeciesCode;
+  speciesName?: string;
   birthDate?: Date;
   isFounder: boolean;
   fatherId?: string;
@@ -40,7 +37,7 @@ export interface Animal {
 export interface AnimalCreateDTO {
   crotal: string;
   sex: Sex;
-  species: Species;
+  speciesId: string;
   birthDate?: Date;
   isFounder: boolean;
   fatherId?: string;
@@ -50,6 +47,7 @@ export interface AnimalCreateDTO {
 
 export interface AnimalUpdateDTO {
   crotal?: string;
+  speciesId?: string;
   birthDate?: Date;
   isFounder?: boolean;
   fatherId?: string;

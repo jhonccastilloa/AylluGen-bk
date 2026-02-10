@@ -230,7 +230,9 @@ export class BreedingService {
             id: breeding.offspring.id,
             crotal: breeding.offspring.crotal,
             sex: breeding.offspring.sex,
+            speciesId: breeding.offspring.speciesId,
             species: breeding.offspring.species,
+            speciesName: breeding.offspring.speciesName ?? null,
             birthDate: breeding.offspring.birthDate?.toISOString() || null,
             isFounder: breeding.offspring.isFounder,
           }

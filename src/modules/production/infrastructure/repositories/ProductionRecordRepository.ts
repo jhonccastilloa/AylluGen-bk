@@ -12,66 +12,59 @@ import { IProductionRecordRepository } from "../../../production/domain/reposito
 import {
   Animal,
   Sex,
-  Species,
   SyncStatus as AnimalSyncStatus,
 } from "../../../animal/domain/entities/Animal";
-import type {
-  Animal as PrismaAnimal,
-  ProductionRecord as PrismaProductionRecord,
-} from "@infrastructure/database/prisma/generated/client";
 
-type ProductionRecordWithAnimal = PrismaProductionRecord & {
-  animal?: PrismaAnimal | null;
-};
+type ProductionRecordWithAnimal = any;
 
 @injectable()
 export class ProductionRecordRepository implements IProductionRecordRepository {
   async findById(id: string): Promise<ProductionRecord | null> {
-    const record = await prisma.productionRecord.findUnique({
+    const record = await (prisma.productionRecord as any).findUnique({
       where: { id },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
     });
 
     return record ? this.mapToEntity(record) : null;
   }
 
   async findAllByUserId(userId: string): Promise<ProductionRecord[]> {
-    const records = await prisma.productionRecord.findMany({
+    const records = await (prisma.productionRecord as any).findMany({
       where: { userId },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async findByAnimalId(animalId: string): Promise<ProductionRecord[]> {
-    const records = await prisma.productionRecord.findMany({
+    const records = await (prisma.productionRecord as any).findMany({
       where: { animalId },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async findByType(
     userId: string,
     type: ProductionType,
   ): Promise<ProductionRecord[]> {
-    const records = await prisma.productionRecord.findMany({
+    const records = await (prisma.productionRecord as any).findMany({
       where: { userId, type },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async create(data: ProductionRecordCreateInput): Promise<ProductionRecord> {
-    const record = await prisma.productionRecord.create({
+    const record = await (prisma.productionRecord as any).create({
       data,
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
     });
 
     return this.mapToEntity(record);
@@ -81,31 +74,31 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
     id: string,
     data: ProductionRecordUpdateInput,
   ): Promise<ProductionRecord> {
-    const record = await prisma.productionRecord.update({
+    const record = await (prisma.productionRecord as any).update({
       where: { id },
       data: { ...data, syncVersion: { increment: 1 } },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
     });
 
     return this.mapToEntity(record);
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.productionRecord.delete({ where: { id } });
+    await (prisma.productionRecord as any).delete({ where: { id } });
   }
 
   async findRecentByAnimal(
     animalId: string,
     limit = 10,
   ): Promise<ProductionRecord[]> {
-    const records = await prisma.productionRecord.findMany({
+    const records = await (prisma.productionRecord as any).findMany({
       where: { animalId },
-      include: { animal: true },
+      include: { animal: { include: { speciesCatalog: true } } },
       orderBy: { date: "desc" },
       take: limit,
     });
 
-    return records.map((record) => this.mapToEntity(record));
+    return records.map((record: any) => this.mapToEntity(record));
   }
 
   async calculateSummary(
@@ -186,12 +179,14 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
     };
   }
 
-  private mapAnimalToEntity(data: PrismaAnimal): Animal {
+  private mapAnimalToEntity(data: any): Animal {
     return {
       id: data.id,
       crotal: data.crotal,
       sex: data.sex as Sex,
-      species: data.species as Species,
+      speciesId: data.speciesId,
+      species: data.speciesCatalog?.code ?? "",
+      speciesName: data.speciesCatalog?.name ?? undefined,
       birthDate: data.birthDate ?? undefined,
       isFounder: data.isFounder,
       fatherId: data.fatherId ?? undefined,

@@ -18,21 +18,38 @@ import {
   AnimalUpdateDTO,
   Sex,
 } from "../../domain/entities/Animal";
+import { SpeciesService } from "../../../species/application/services/SpeciesService";
 
 @injectable()
 export class AnimalService {
   constructor(
     @inject(TYPES.IAnimalRepository)
     private animalRepository: IAnimalRepository,
+    @inject(TYPES.SpeciesService)
+    private speciesService: SpeciesService,
   ) {}
 
   async create(
     userId: string,
     data: AnimalCreateInput,
   ): Promise<AnimalResponse> {
+    const resolvedSpecies = await this.speciesService.resolveSpeciesForAnimal(
+      userId,
+      {
+        speciesId: data.speciesId,
+        speciesCode: data.speciesCode,
+        species: data.species,
+      },
+    );
+
     const createData: AnimalCreateDTO = {
-      ...data,
+      crotal: data.crotal,
+      sex: data.sex,
+      speciesId: resolvedSpecies.speciesId,
       birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+      isFounder: data.isFounder ?? false,
+      fatherId: data.fatherId,
+      motherId: data.motherId,
       userId,
     };
     const existing = await this.animalRepository.findByCrotal(
@@ -78,9 +95,23 @@ export class AnimalService {
       );
     }
     const updateData: AnimalUpdateDTO = {
-      ...data,
+      crotal: data.crotal,
       birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+      isFounder: data.isFounder,
+      fatherId: data.fatherId,
+      motherId: data.motherId,
     };
+
+    if (data.speciesId || data.speciesCode) {
+      const resolvedSpecies = await this.speciesService.resolveSpeciesForAnimal(
+        userId,
+        {
+          speciesId: data.speciesId,
+          speciesCode: data.speciesCode,
+        },
+      );
+      updateData.speciesId = resolvedSpecies.speciesId;
+    }
 
     const updated = await this.animalRepository.update(id, updateData);
 
@@ -187,7 +218,9 @@ export class AnimalService {
       id: animal.id,
       crotal: animal.crotal,
       sex: animal.sex,
+      speciesId: animal.speciesId,
       species: animal.species,
+      speciesName: animal.speciesName ?? null,
       birthDate: animal.birthDate?.toISOString() || null,
       isFounder: animal.isFounder,
       fatherId: animal.fatherId || null,

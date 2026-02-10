@@ -7,11 +7,13 @@ import {
 } from "../../../../shared/errors/AppError";
 import { prisma } from "../../../../infrastructure/database/prisma/client";
 import { SyncPullInput, SyncPushInput } from "../schemas/sync.schema";
+import { SpeciesService } from "../../../species/application/services/SpeciesService";
 
 @injectable()
 export class SyncService {
   constructor(
     @inject(TYPES.ISyncRepository) private syncRepository: ISyncRepository,
+    @inject(TYPES.SpeciesService) private speciesService: SpeciesService,
   ) {}
 
   async pushChanges(data: SyncPushInput): Promise<any> {
@@ -129,7 +131,13 @@ export class SyncService {
         return { conflict: true, serverVersion: existing };
       }
 
-      const createData = this.transformForCreate(change.data);
+      let createData = this.transformForCreate(change.data);
+      if (change.tableName === "animals") {
+        createData = await this.normalizeAnimalPayloadForPersistence(
+          userId,
+          createData,
+        );
+      }
       await table.create({
         data: { ...createData, id: change.recordId, userId },
       });
@@ -154,7 +162,13 @@ export class SyncService {
         return { conflict: true, serverVersion: record };
       }
 
-      const updateData = this.transformForUpdate(change.data);
+      let updateData = this.transformForUpdate(change.data);
+      if (change.tableName === "animals") {
+        updateData = await this.normalizeAnimalPayloadForPersistence(
+          userId,
+          updateData,
+        );
+      }
       await table.update({
         where: { id: change.recordId },
         data: {
@@ -175,14 +189,27 @@ export class SyncService {
     tableName: string,
     lastSyncAt?: Date,
   ): Promise<any[]> {
-    const table = this.getPrismaTable(tableName);
-
     const whereClause: any = { userId };
 
     if (lastSyncAt) {
       whereClause.updatedAt = { gte: lastSyncAt };
     }
 
+    if (tableName === "animals") {
+      const records = await (prisma.animal as any).findMany({
+        where: whereClause,
+        include: { speciesCatalog: true },
+        orderBy: { updatedAt: "asc" },
+      });
+
+      return records.map((record: any) => ({
+        ...record,
+        species: record.speciesCatalog?.code ?? null,
+        speciesName: record.speciesCatalog?.name ?? null,
+      }));
+    }
+
+    const table = this.getPrismaTable(tableName);
     const records = await table.findMany({
       where: whereClause,
       orderBy: { updatedAt: "asc" },
@@ -236,6 +263,38 @@ export class SyncService {
     }
 
     return result;
+  }
+
+  private async normalizeAnimalPayloadForPersistence(
+    userId: string,
+    data: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const speciesIdRaw = data.speciesId;
+    const speciesCodeRaw = data.speciesCode ?? data.species;
+
+    const resolvedSpecies = await this.speciesService.resolveSpeciesForAnimal(
+      userId,
+      {
+        speciesId:
+          typeof speciesIdRaw === "string" && speciesIdRaw.trim().length > 0
+            ? speciesIdRaw
+            : undefined,
+        speciesCode:
+          typeof speciesCodeRaw === "string" && speciesCodeRaw.trim().length > 0
+            ? speciesCodeRaw
+            : undefined,
+      },
+    );
+
+    const normalizedData: Record<string, unknown> = {
+      ...data,
+      speciesId: resolvedSpecies.speciesId,
+    };
+    delete normalizedData.species;
+    delete normalizedData.speciesCode;
+    delete normalizedData.speciesName;
+
+    return normalizedData;
   }
 
   private isDateString(str: string): boolean {

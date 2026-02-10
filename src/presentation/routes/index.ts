@@ -6,6 +6,7 @@ import breedingRoutes from "../../modules/breeding/presentation/routes/breeding.
 import healthRoutes from "../../modules/health/presentation/routes/health.routes";
 import productionRoutes from "../../modules/production/presentation/routes/production.routes";
 import syncRoutes from "../../modules/sync/presentation/routes/sync.routes";
+import speciesRoutes from "../../modules/species/presentation/routes/species.routes";
 import {
   healthCheck,
   readyCheck,
@@ -24,5 +25,6 @@ router.use("/breedings", breedingRoutes);
 router.use("/sanity", healthRoutes);
 router.use("/production", productionRoutes);
 router.use("/sync", syncRoutes);
+router.use("/species", speciesRoutes);
 
 export default router;

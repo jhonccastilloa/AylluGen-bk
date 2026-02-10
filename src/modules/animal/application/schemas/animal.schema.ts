@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Sex, Species } from "../../../animal/domain/entities/Animal";
+import { Sex } from "../../../animal/domain/entities/Animal";
 
 export const animalCreateSchema = z
   .object({
@@ -9,9 +9,23 @@ export const animalCreateSchema = z
       .max(50)
       .describe("Unique identifier for the animal"),
     sex: z.enum(Sex).describe("Animal sex: MALE or FEMALE"),
+    speciesId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Species ID linked from species catalog"),
+    speciesCode: z
+      .string()
+      .min(2)
+      .max(30)
+      .optional()
+      .describe("Species code when speciesId is not available"),
     species: z
-      .enum(Species)
-      .describe("Animal species: SHEEP, ALPACA, LLAMA, or VICUGNA"),
+      .string()
+      .min(2)
+      .max(30)
+      .optional()
+      .describe("Legacy species code for backward compatibility"),
     birthDate: z.iso.datetime().optional().describe("Birth date of the animal"),
     isFounder: z
       .boolean()
@@ -21,13 +35,21 @@ export const animalCreateSchema = z
     fatherId: z.uuid().optional().describe("Father animal ID"),
     motherId: z.uuid().optional().describe("Mother animal ID"),
   })
+  .refine(
+    (input) =>
+      Boolean(input.speciesId || input.speciesCode || input.species),
+    {
+      message:
+        "Debe enviar speciesId o speciesCode para enlazar la especie del animal",
+    },
+  )
   .openapi({
     title: "AnimalCreateInput",
     description: "Schema for creating a new animal",
     example: {
       crotal: "CR12345",
       sex: Sex.FEMALE,
-      species: Species.SHEEP,
+      speciesCode: "SHEEP",
       birthDate: "2024-01-15T00:00:00Z",
       isFounder: false,
       fatherId: "550e8400-e29b-41d4-a716-446655440000",
@@ -43,6 +65,17 @@ export const animalUpdateSchema = z
       .max(50)
       .optional()
       .describe("Unique identifier for the animal"),
+    speciesId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Species ID linked from species catalog"),
+    speciesCode: z
+      .string()
+      .min(2)
+      .max(30)
+      .optional()
+      .describe("Species code when updating by code"),
     birthDate: z.iso.datetime().optional().describe("Birth date of the animal"),
     isFounder: z
       .boolean()
@@ -56,6 +89,7 @@ export const animalUpdateSchema = z
     description: "Schema for updating an animal",
     example: {
       isFounder: true,
+      speciesCode: "ALPACA",
       fatherId: undefined,
       motherId: undefined,
     },
@@ -63,7 +97,7 @@ export const animalUpdateSchema = z
 
 export const animalQuerySchema = z
   .object({
-    species: z.enum(Species).optional().describe("Filter by species"),
+    species: z.string().optional().describe("Filter by species code"),
     sex: z.enum(Sex).optional().describe("Filter by sex"),
     isFounder: z.boolean().optional().describe("Filter by founder status"),
     search: z.string().optional().describe("Search by crotal"),
@@ -74,7 +108,7 @@ export const animalQuerySchema = z
     title: "AnimalQueryInput",
     description: "Schema for querying animals",
     example: {
-      species: Species.SHEEP,
+      species: "SHEEP",
       sex: Sex.FEMALE,
       limit: 20,
       offset: 0,
@@ -85,7 +119,9 @@ const animalRelationSchema = z.object({
   id: z.string().uuid(),
   crotal: z.string(),
   sex: z.enum(Sex),
-  species: z.enum(Species),
+  speciesId: z.string(),
+  species: z.string(),
+  speciesName: z.string().nullable().optional(),
   birthDate: z.string().datetime().nullable(),
   isFounder: z.boolean(),
 });
@@ -95,7 +131,9 @@ export const animalResponseSchema = z
     id: z.string().uuid(),
     crotal: z.string(),
     sex: z.enum(Sex),
-    species: z.enum(Species),
+    speciesId: z.string(),
+    species: z.string(),
+    speciesName: z.string().nullable().optional(),
     birthDate: z.string().datetime().nullable(),
     isFounder: z.boolean(),
     fatherId: z.string().uuid().nullable(),
@@ -117,7 +155,9 @@ export const animalResponseSchema = z
       id: "123e4567-e89b-12d3-a456-426614174000",
       crotal: "CR12345",
       sex: Sex.FEMALE,
-      species: Species.SHEEP,
+      speciesId: "sp-12345",
+      species: "SHEEP",
+      speciesName: "Sheep",
       birthDate: "2024-01-15T00:00:00Z",
       isFounder: false,
       fatherId: "550e8400-e29b-41d4-a716-446655440000",

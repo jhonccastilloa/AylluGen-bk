@@ -3,7 +3,7 @@ import {
   AnimalCreateDTO,
   AnimalUpdateDTO,
   Sex,
-  Species,
+  SpeciesCode,
 } from "../entities/Animal";
 
 export interface IAnimalRepository {
@@ -18,7 +18,7 @@ export interface IAnimalRepository {
     animalId: string,
   ): Promise<{ father?: Animal; mother?: Animal } | null>;
   findChildren(animalId: string): Promise<Animal[]>;
-  findBySpecies(userId: string, species: Species): Promise<Animal[]>;
+  findBySpecies(userId: string, species: SpeciesCode): Promise<Animal[]>;
   findBySex(userId: string, sex: Sex): Promise<Animal[]>;
   findFounders(userId: string): Promise<Animal[]>;
 }

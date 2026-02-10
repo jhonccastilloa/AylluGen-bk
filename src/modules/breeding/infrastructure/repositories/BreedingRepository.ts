@@ -7,23 +7,17 @@ import {
   SyncStatus,
   BreedingUpdateInput,
 } from "../../../breeding/domain/entities/Breeding";
-import { Animal, Sex, Species, SyncStatus as AnimalSyncStatus } from "../../../animal/domain/entities/Animal";
-import type {
-  Animal as PrismaAnimal,
-  Breeding as PrismaBreeding,
-} from "@infrastructure/database/prisma/generated/client";
+import { Animal, Sex, SyncStatus as AnimalSyncStatus } from "../../../animal/domain/entities/Animal";
 import { IBreedingRepository } from "../../../breeding/domain/repositories/IBreedingRepository";
 
-type BreedingWithRelations = PrismaBreeding & {
-  offspring?: PrismaAnimal | null;
-};
+type BreedingWithRelations = any;
 
 @injectable()
 export class BreedingRepository implements IBreedingRepository {
   async findById(id: string): Promise<Breeding | null> {
-    const breeding = await prisma.breeding.findUnique({
+    const breeding = await (prisma.breeding as any).findUnique({
       where: { id },
-      include: { offspring: true },
+      include: { offspring: { include: { speciesCatalog: true } } },
     });
 
     return breeding ? this.mapToEntity(breeding) : null;
@@ -33,55 +27,55 @@ export class BreedingRepository implements IBreedingRepository {
     maleId: string,
     femaleId: string,
   ): Promise<Breeding | null> {
-    const breeding = await prisma.breeding.findFirst({
+    const breeding = await (prisma.breeding as any).findFirst({
       where: { maleId, femaleId },
-      include: { offspring: true },
+      include: { offspring: { include: { speciesCatalog: true } } },
     });
 
     return breeding ? this.mapToEntity(breeding) : null;
   }
 
   async findAllByUserId(userId: string): Promise<Breeding[]> {
-    const breedings = await prisma.breeding.findMany({
+    const breedings = await (prisma.breeding as any).findMany({
       where: { userId },
-      include: { offspring: true },
+      include: { offspring: { include: { speciesCatalog: true } } },
       orderBy: { createdAt: "desc" },
     });
 
-    return breedings.map((b) => this.mapToEntity(b));
+    return breedings.map((b: any) => this.mapToEntity(b));
   }
 
   async create(data: BreedingCreateInput): Promise<Breeding> {
-    const breeding = await prisma.breeding.create({
+    const breeding = await (prisma.breeding as any).create({
       data,
-      include: { offspring: true },
+      include: { offspring: { include: { speciesCatalog: true } } },
     });
 
     return this.mapToEntity(breeding);
   }
 
   async update(id: string, data: BreedingUpdateInput): Promise<Breeding> {
-    const breeding = await prisma.breeding.update({
+    const breeding = await (prisma.breeding as any).update({
       where: { id },
       data: { ...data, syncVersion: { increment: 1 } },
-      include: { offspring: true },
+      include: { offspring: { include: { speciesCatalog: true } } },
     });
 
     return this.mapToEntity(breeding);
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.breeding.delete({ where: { id } });
+    await (prisma.breeding as any).delete({ where: { id } });
   }
 
   async findBreedingHistory(animalId: string): Promise<Breeding[]> {
-    const breedings = await prisma.breeding.findMany({
+    const breedings = await (prisma.breeding as any).findMany({
       where: { OR: [{ maleId: animalId }, { femaleId: animalId }] },
-      include: { offspring: true },
+      include: { offspring: { include: { speciesCatalog: true } } },
       orderBy: { createdAt: "desc" },
     });
 
-    return breedings.map((b) => this.mapToEntity(b));
+    return breedings.map((b: any) => this.mapToEntity(b));
   }
 
   private mapToEntity(data: BreedingWithRelations): Breeding {
@@ -103,12 +97,14 @@ export class BreedingRepository implements IBreedingRepository {
     };
   }
 
-  private mapAnimalToEntity(data: PrismaAnimal): Animal {
+  private mapAnimalToEntity(data: any): Animal {
     return {
       id: data.id,
       crotal: data.crotal,
       sex: data.sex as Sex,
-      species: data.species as Species,
+      speciesId: data.speciesId,
+      species: data.speciesCatalog?.code ?? "",
+      speciesName: data.speciesCatalog?.name ?? undefined,
       birthDate: data.birthDate ?? undefined,
       isFounder: data.isFounder,
       fatherId: data.fatherId ?? undefined,

@@ -169,7 +169,9 @@ export class HealthRecordService {
             id: record.animal.id,
             crotal: record.animal.crotal,
             sex: record.animal.sex,
+            speciesId: record.animal.speciesId,
             species: record.animal.species,
+            speciesName: record.animal.speciesName ?? null,
             birthDate: record.animal.birthDate?.toISOString() || null,
             isFounder: record.animal.isFounder,
           }

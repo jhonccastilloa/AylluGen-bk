@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { ProductionType } from "../../domain/entities/ProductionRecord";
-import { Sex, Species } from "../../../animal/domain/entities/Animal";
+import { Sex } from "../../../animal/domain/entities/Animal";
 
 const animalRelationSchema = z.object({
   id: z.uuid(),
   crotal: z.string(),
   sex: z.enum(Sex),
-  species: z.enum(Species),
+  speciesId: z.string(),
+  species: z.string(),
+  speciesName: z.string().nullable().optional(),
   birthDate: z.iso.datetime().nullable(),
   isFounder: z.boolean(),
 });
