@@ -59,22 +59,14 @@ export class AnimalService {
     if (existing) {
       throw new ConflictError("El crotal ya está en uso");
     }
-    if (data.fatherId) {
-      const existingFather = await this.animalRepository.findById(
-        data.fatherId,
-      );
-      if (!existingFather) {
-        throw new NotFoundError("Animal padre no encontrado");
-      }
-    }
-    if (data.motherId) {
-      const existingMother = await this.animalRepository.findById(
-        data.motherId,
-      );
-      if (!existingMother) {
-        throw new NotFoundError("Animal madre no encontrado");
-      }
-    }
+
+    await this.validateParentCompatibility({
+      userId,
+      childSpeciesId: resolvedSpecies.speciesId,
+      fatherId: data.fatherId,
+      motherId: data.motherId,
+    });
+
     const animal = await this.animalRepository.create(createData);
     return this.mapToResponse(animal);
   }
@@ -112,6 +104,18 @@ export class AnimalService {
       );
       updateData.speciesId = resolvedSpecies.speciesId;
     }
+
+    const nextSpeciesId = updateData.speciesId ?? animal.speciesId;
+    const nextFatherId = data.fatherId ?? animal.fatherId;
+    const nextMotherId = data.motherId ?? animal.motherId;
+
+    await this.validateParentCompatibility({
+      userId,
+      childSpeciesId: nextSpeciesId,
+      fatherId: nextFatherId,
+      motherId: nextMotherId,
+      childId: id,
+    });
 
     const updated = await this.animalRepository.update(id, updateData);
 
@@ -235,5 +239,76 @@ export class AnimalService {
       updatedAt: animal.updatedAt.toISOString(),
       deletedAt: animal.deletedAt?.toISOString() || null,
     };
+  }
+
+  private async validateParentCompatibility(input: {
+    userId: string;
+    childSpeciesId: string;
+    fatherId?: string;
+    motherId?: string;
+    childId?: string;
+  }): Promise<void> {
+    const { userId, childSpeciesId, fatherId, motherId, childId } = input;
+
+    let father: Animal | null = null;
+    let mother: Animal | null = null;
+
+    if (fatherId) {
+      father = await this.animalRepository.findById(fatherId);
+      if (!father) {
+        throw new NotFoundError("Animal padre no encontrado");
+      }
+      if (father.userId !== userId) {
+        throw new ValidationError("El padre no pertenece al usuario autenticado");
+      }
+      if (father.sex !== Sex.MALE) {
+        throw new ValidationError("El animal seleccionado como padre debe ser macho");
+      }
+      if (childId && father.id === childId) {
+        throw new ValidationError("Un animal no puede ser su propio padre");
+      }
+    }
+
+    if (motherId) {
+      mother = await this.animalRepository.findById(motherId);
+      if (!mother) {
+        throw new NotFoundError("Animal madre no encontrado");
+      }
+      if (mother.userId !== userId) {
+        throw new ValidationError("La madre no pertenece al usuario autenticado");
+      }
+      if (mother.sex !== Sex.FEMALE) {
+        throw new ValidationError(
+          "El animal seleccionado como madre debe ser hembra",
+        );
+      }
+      if (childId && mother.id === childId) {
+        throw new ValidationError("Un animal no puede ser su propia madre");
+      }
+    }
+
+    if (father && mother && father.id === mother.id) {
+      throw new ValidationError(
+        "El padre y la madre deben ser animales diferentes",
+      );
+    }
+
+    if (father && mother && father.speciesId !== mother.speciesId) {
+      throw new ValidationError(
+        "El padre y la madre deben ser de la misma especie",
+      );
+    }
+
+    if (father && father.speciesId !== childSpeciesId) {
+      throw new ValidationError(
+        "La especie de la cría debe coincidir con la especie del padre",
+      );
+    }
+
+    if (mother && mother.speciesId !== childSpeciesId) {
+      throw new ValidationError(
+        "La especie de la cría debe coincidir con la especie de la madre",
+      );
+    }
   }
 }
