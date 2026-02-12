@@ -9,7 +9,7 @@ import {
   notFoundHandler,
 } from "./presentation/middlewares/error.middleware";
 // import { requestLogger } from "./presentation/middlewares/request-logger.middleware";
-import { generalLimiter } from "./presentation/middlewares/rate-limit.middleware";
+// import { generalLimiter } from "./presentation/middlewares/rate-limit.middleware";
 import routes from "./presentation/routes";
 import helmet from "helmet";
 import { requestLogger } from "@presentation/middlewares";
@@ -32,7 +32,7 @@ class App {
         contentSecurityPolicy: config.isProd ? undefined : false,
       }),
     );
-    this.app.use(generalLimiter);
+    // this.app.use(generalLimiter);
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(requestLogger);

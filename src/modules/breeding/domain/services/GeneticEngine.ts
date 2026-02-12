@@ -1,33 +1,33 @@
 import { Animal } from "../../../animal/domain/entities/Animal";
 import { COICalculationResult, RiskLevel } from "../entities/Breeding";
 
+interface AncestorPath {
+  generations: number;
+  nodes: string[];
+}
+
 export class GeneticEngine {
-  private relationshipMatrix: Map<string, number> = new Map();
+  private readonly maxGenerations = 8;
 
-  constructor() {
-    this.initializeMatrix();
-  }
-
-  private initializeMatrix(): void {
-    this.relationshipMatrix.set("parent-child", 0.5);
-    this.relationshipMatrix.set("full-siblings", 0.5);
-    this.relationshipMatrix.set("half-siblings", 0.25);
-    this.relationshipMatrix.set("grandparent-grandchild", 0.25);
-    this.relationshipMatrix.set("aunt-uncle-niece-nephew", 0.25);
-    this.relationshipMatrix.set("first-cousins", 0.125);
-    this.relationshipMatrix.set("half-aunt-uncle", 0.125);
-    this.relationshipMatrix.set("great-grandparent-great-grandchild", 0.125);
-    this.relationshipMatrix.set("first-cousins-once-removed", 0.0625);
-    this.relationshipMatrix.set("second-cousins", 0.03125);
-  }
+  constructor() {}
 
   calculateCOI(
     male: Animal,
     female: Animal,
     pedigree: Map<string, Animal>,
   ): COICalculationResult {
-    const relationship = this.calculateRelationship(male, female, pedigree);
-    const coi = relationship * 0.5;
+    const inbreedingCache = new Map<string, number>();
+    const pairCache = new Map<string, number>();
+    const visitingInbreeding = new Set<string>();
+    const coi = this.calculateWrightCoefficient(
+      male,
+      female,
+      pedigree,
+      inbreedingCache,
+      pairCache,
+      visitingInbreeding,
+    );
+    const relationship = Math.min(coi * 2, 1);
     const riskLevel = this.getRiskLevel(coi);
 
     return {
@@ -42,127 +42,196 @@ export class GeneticEngine {
     female: Animal,
     pedigree: Map<string, Animal>,
   ): number {
-    if (male.id === female.id) return 1.0;
-
-    const commonAncestors = this.findCommonAncestors(male, female, pedigree, 4);
-
-    if (commonAncestors.length === 0) return 0.0;
-
-    let totalRelationship = 0;
-
-    for (const ancestor of commonAncestors) {
-      const malePathLength = this.getPathLength(male.id, ancestor.id, pedigree);
-      const femalePathLength = this.getPathLength(
-        female.id,
-        ancestor.id,
-        pedigree,
-      );
-
-      if (malePathLength > 0 && femalePathLength > 0) {
-        const contribution = Math.pow(0.5, malePathLength + femalePathLength);
-        totalRelationship += contribution;
-      }
-    }
-
-    return Math.min(totalRelationship, 1.0);
+    const inbreedingCache = new Map<string, number>();
+    const pairCache = new Map<string, number>();
+    const visitingInbreeding = new Set<string>();
+    const coi = this.calculateWrightCoefficient(
+      male,
+      female,
+      pedigree,
+      inbreedingCache,
+      pairCache,
+      visitingInbreeding,
+    );
+    return Math.min(coi * 2, 1);
   }
 
-  private findCommonAncestors(
+  private calculateWrightCoefficient(
     male: Animal,
     female: Animal,
     pedigree: Map<string, Animal>,
-    maxDepth: number,
-  ): Animal[] {
-    const maleAncestors = new Set<string>();
-    this.collectAncestors(male, pedigree, maleAncestors, maxDepth);
+    inbreedingCache: Map<string, number>,
+    pairCache: Map<string, number>,
+    visitingInbreeding: Set<string>,
+  ): number {
+    const pairKey = this.buildPairKey(male.id, female.id, 1);
+    const cached = pairCache.get(pairKey);
+    if (cached !== undefined) {
+      return cached;
+    }
 
-    const femaleAncestors = new Set<string>();
-    this.collectAncestors(female, pedigree, femaleAncestors, maxDepth);
-
-    const commonIds = [...maleAncestors].filter((id) =>
-      femaleAncestors.has(id),
+    const malePaths = this.buildAncestorPaths(male, pedigree);
+    const femalePaths = this.buildAncestorPaths(female, pedigree);
+    const commonAncestorIds = [...malePaths.keys()].filter((id) =>
+      femalePaths.has(id),
     );
-    return commonIds.map((id) => pedigree.get(id)!).filter(Boolean);
+    let coefficient = 0;
+
+    for (const ancestorId of commonAncestorIds) {
+      const ancestorInbreeding = this.getAncestorInbreeding(
+        ancestorId,
+        pedigree,
+        inbreedingCache,
+        pairCache,
+        visitingInbreeding,
+      );
+      const maleAncestorPaths = malePaths.get(ancestorId) ?? [];
+      const femaleAncestorPaths = femalePaths.get(ancestorId) ?? [];
+
+      for (const malePath of maleAncestorPaths) {
+        for (const femalePath of femaleAncestorPaths) {
+          if (!this.arePathsIndependent(malePath, femalePath)) {
+            continue;
+          }
+
+          const contribution = Math.pow(
+            0.5,
+            malePath.generations + femalePath.generations + 1,
+          );
+          coefficient += contribution * (1 + ancestorInbreeding);
+        }
+      }
+    }
+
+    const normalized = Math.min(Math.max(coefficient, 0), 1);
+    pairCache.set(pairKey, normalized);
+    return normalized;
   }
 
-  private collectAncestors(
+  private getAncestorInbreeding(
+    ancestorId: string,
+    pedigree: Map<string, Animal>,
+    inbreedingCache: Map<string, number>,
+    pairCache: Map<string, number>,
+    visitingInbreeding: Set<string>,
+  ): number {
+    const cached = inbreedingCache.get(ancestorId);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    if (visitingInbreeding.has(ancestorId)) {
+      return 0;
+    }
+
+    const ancestor = pedigree.get(ancestorId);
+    if (!ancestor?.fatherId || !ancestor.motherId) {
+      inbreedingCache.set(ancestorId, 0);
+      return 0;
+    }
+
+    const father = pedigree.get(ancestor.fatherId);
+    const mother = pedigree.get(ancestor.motherId);
+    if (!father || !mother) {
+      inbreedingCache.set(ancestorId, 0);
+      return 0;
+    }
+
+    visitingInbreeding.add(ancestorId);
+    const inbreeding = this.calculateWrightCoefficient(
+      father,
+      mother,
+      pedigree,
+      inbreedingCache,
+      pairCache,
+      visitingInbreeding,
+    );
+    visitingInbreeding.delete(ancestorId);
+    inbreedingCache.set(ancestorId, inbreeding);
+    return inbreeding;
+  }
+
+  private buildAncestorPaths(
     animal: Animal,
     pedigree: Map<string, Animal>,
-    ancestors: Set<string>,
-    depth: number,
-    visited = new Set<string>(),
-  ): void {
-    if (depth <= 0 || visited.has(animal.id)) return;
+  ): Map<string, AncestorPath[]> {
+    const byAncestor = new Map<string, Map<string, AncestorPath>>();
 
-    visited.add(animal.id);
-
-    if (animal.fatherId) {
-      ancestors.add(animal.fatherId);
-      const father = pedigree.get(animal.fatherId);
-      if (father) {
-        this.collectAncestors(father, pedigree, ancestors, depth - 1, visited);
+    const registerPath = (ancestorId: string, path: AncestorPath): void => {
+      let ancestorEntries = byAncestor.get(ancestorId);
+      if (!ancestorEntries) {
+        ancestorEntries = new Map<string, AncestorPath>();
+        byAncestor.set(ancestorId, ancestorEntries);
       }
-    }
 
-    if (animal.motherId) {
-      ancestors.add(animal.motherId);
-      const mother = pedigree.get(animal.motherId);
-      if (mother) {
-        this.collectAncestors(mother, pedigree, ancestors, depth - 1, visited);
+      ancestorEntries.set(this.buildPathKey(path), path);
+    };
+
+    const traverse = (
+      currentId: string,
+      generations: number,
+      nodes: string[],
+      visited: Set<string>,
+    ): void => {
+      if (generations > this.maxGenerations) {
+        return;
       }
+
+      registerPath(currentId, { generations, nodes: [...nodes] });
+      const current = pedigree.get(currentId);
+      if (!current) {
+        return;
+      }
+
+      const parents = [current.fatherId, current.motherId].filter(
+        (parentId): parentId is string => Boolean(parentId),
+      );
+
+      for (const parentId of parents) {
+        if (visited.has(parentId)) {
+          continue;
+        }
+
+        const nextNodes =
+          currentId === animal.id ? [...nodes] : [...nodes, currentId];
+        const nextVisited = new Set(visited);
+        nextVisited.add(parentId);
+        traverse(parentId, generations + 1, nextNodes, nextVisited);
+      }
+    };
+
+    traverse(animal.id, 0, [], new Set([animal.id]));
+
+    const result = new Map<string, AncestorPath[]>();
+    for (const [ancestorId, paths] of byAncestor.entries()) {
+      result.set(ancestorId, [...paths.values()]);
     }
+    return result;
   }
 
-  private getPathLength(
-    fromId: string,
-    toId: string,
-    pedigree: Map<string, Animal>,
-  ): number {
-    const visited = new Set<string>();
-    return this.findPathLength(fromId, toId, pedigree, visited);
+  private arePathsIndependent(
+    leftPath: AncestorPath,
+    rightPath: AncestorPath,
+  ): boolean {
+    if (leftPath.nodes.length === 0 || rightPath.nodes.length === 0) {
+      return true;
+    }
+
+    const leftNodes = new Set(leftPath.nodes);
+    return !rightPath.nodes.some((nodeId) => leftNodes.has(nodeId));
   }
 
-  private findPathLength(
-    fromId: string,
-    toId: string,
-    pedigree: Map<string, Animal>,
-    visited: Set<string>,
-  ): number {
-    if (fromId === toId) return 0;
-    if (visited.has(fromId)) return -1;
+  private buildPairKey(
+    leftAnimalId: string,
+    rightAnimalId: string,
+    exponentOffset: number,
+  ): string {
+    const [first, second] = [leftAnimalId, rightAnimalId].sort();
+    return `${exponentOffset}:${first}:${second}`;
+  }
 
-    visited.add(fromId);
-
-    const animal = pedigree.get(fromId);
-    if (!animal) return -1;
-
-    let minPath = Infinity;
-
-    if (animal.fatherId) {
-      const path = this.findPathLength(
-        animal.fatherId,
-        toId,
-        pedigree,
-        visited,
-      );
-      if (path >= 0 && path < minPath) {
-        minPath = path + 1;
-      }
-    }
-
-    if (animal.motherId) {
-      const path = this.findPathLength(
-        animal.motherId,
-        toId,
-        pedigree,
-        visited,
-      );
-      if (path >= 0 && path < minPath) {
-        minPath = path + 1;
-      }
-    }
-
-    return minPath === Infinity ? -1 : minPath;
+  private buildPathKey(path: AncestorPath): string {
+    return `${path.generations}:${path.nodes.join(">")}`;
   }
 
   private getRiskLevel(coi: number): RiskLevel {

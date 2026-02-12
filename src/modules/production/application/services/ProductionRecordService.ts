@@ -109,9 +109,16 @@ export class ProductionRecordService {
       type,
     );
     if (!summary) {
-      throw new NotFoundError(
-        "No production records found for this animal and type",
-      );
+      return {
+        animalId,
+        animalCrotal: animal.crotal,
+        type,
+        totalRecords: 0,
+        averageValue: 0,
+        averageQualityScore: null,
+        lastRecord: "",
+        trend: "stable",
+      };
     }
 
     return {

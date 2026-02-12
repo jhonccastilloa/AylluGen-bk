@@ -295,17 +295,26 @@ describe("ProductionRecordService", () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it("should throw NotFoundError when no records found", async () => {
+    it("should return empty summary when no records found", async () => {
       animalRepository.findById.mockResolvedValue(mockAnimal);
       productionRecordRepository.calculateSummary.mockResolvedValue(null);
 
-      await expect(
-        productionRecordService.getSummary(
-          animalId,
-          userId,
-          ProductionType.WOOL,
-        ),
-      ).rejects.toThrow(NotFoundError);
+      const result = await productionRecordService.getSummary(
+        animalId,
+        userId,
+        ProductionType.WOOL,
+      );
+
+      expect(result).toEqual({
+        animalId,
+        animalCrotal: mockAnimal.crotal,
+        type: ProductionType.WOOL,
+        totalRecords: 0,
+        averageValue: 0,
+        averageQualityScore: null,
+        lastRecord: "",
+        trend: "stable",
+      });
     });
   });
 

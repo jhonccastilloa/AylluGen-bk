@@ -118,11 +118,10 @@ export const productionRecordSummaryParamSchema = z.object({
 
 export const productionReacordRecentQuerySchema = z.object({
   limit: z
-    .number()
+    .coerce.number()
     .int()
     .positive()
     .default(10)
-    .optional()
     .describe("Numero máximo de registros a retornar"),
 });
 
