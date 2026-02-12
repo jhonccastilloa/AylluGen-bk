@@ -9,6 +9,7 @@ import { registerBreedingsRoutes } from "./features/breedings.openapi";
 import { registerHealthRoutes } from "./features/health.openapi";
 import { registerProductionRoutes } from "./features/production.openapi";
 import { registerSyncRoutes } from "./features/sync.openapi";
+import { config } from "@shared/constants/config";
 
 export function generateOpenApiSpec() {
   const registry = new OpenAPIRegistry();
@@ -43,7 +44,7 @@ export function generateOpenApiSpec() {
     },
     servers: [
       {
-        url: "http://localhost:3000",
+        url: `http://localhost:${config.port}`,
         description: "Development server",
       },
     ],
