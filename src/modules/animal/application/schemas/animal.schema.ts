@@ -144,6 +144,8 @@ export const animalResponseSchema = z
     userId: z.string().uuid(),
     syncStatus: z.enum(["SYNCED", "PENDING", "CONFLICT", "DELETED"]),
     syncVersion: z.number(),
+    clientCreatedAt: z.iso.datetime().optional().describe("Fecha de creación en el dispositivo"),
+    clientUpdatedAt: z.iso.datetime().optional().describe("Fecha de modificación en el dispositivo"),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     deletedAt: z.string().datetime().nullable(),

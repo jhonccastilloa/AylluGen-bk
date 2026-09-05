@@ -29,6 +29,8 @@ export interface Animal {
   userId: string;
   syncStatus: SyncStatus;
   syncVersion: number;
+  clientCreatedAt?: Date;
+  clientUpdatedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;

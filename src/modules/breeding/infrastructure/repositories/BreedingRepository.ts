@@ -39,7 +39,7 @@ export class BreedingRepository implements IBreedingRepository {
     const breedings = await (prisma.breeding as any).findMany({
       where: { userId },
       include: { offspring: { include: { speciesCatalog: true } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { clientCreatedAt: "desc" },
     });
 
     return breedings.map((b: any) => this.mapToEntity(b));
@@ -57,7 +57,7 @@ export class BreedingRepository implements IBreedingRepository {
   async update(id: string, data: BreedingUpdateInput): Promise<Breeding> {
     const breeding = await (prisma.breeding as any).update({
       where: { id },
-      data: { ...data, syncVersion: { increment: 1 } },
+      data: { ...data, clientUpdatedAt: new Date(), syncVersion: { increment: 1 } },
       include: { offspring: { include: { speciesCatalog: true } } },
     });
 
@@ -72,7 +72,7 @@ export class BreedingRepository implements IBreedingRepository {
     const breedings = await (prisma.breeding as any).findMany({
       where: { OR: [{ maleId: animalId }, { femaleId: animalId }] },
       include: { offspring: { include: { speciesCatalog: true } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { clientCreatedAt: "desc" },
     });
 
     return breedings.map((b: any) => this.mapToEntity(b));
@@ -92,6 +92,8 @@ export class BreedingRepository implements IBreedingRepository {
       userId: data.userId,
       syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
+      clientCreatedAt: data.clientCreatedAt ?? data.createdAt,
+      clientUpdatedAt: data.clientUpdatedAt ?? data.updatedAt,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };
@@ -112,6 +114,8 @@ export class BreedingRepository implements IBreedingRepository {
       userId: data.userId,
       syncStatus: data.syncStatus as AnimalSyncStatus,
       syncVersion: data.syncVersion,
+      clientCreatedAt: data.clientCreatedAt ?? data.createdAt,
+      clientUpdatedAt: data.clientUpdatedAt ?? data.updatedAt,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       deletedAt: data.deletedAt ?? undefined,

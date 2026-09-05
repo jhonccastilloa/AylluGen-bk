@@ -184,6 +184,8 @@ export class HealthRecordService {
       userId: record.userId,
       syncStatus: record.syncStatus,
       syncVersion: record.syncVersion,
+      clientCreatedAt: (record.clientCreatedAt ?? record.createdAt).toISOString(),
+      clientUpdatedAt: (record.clientUpdatedAt ?? record.updatedAt).toISOString(),
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     };

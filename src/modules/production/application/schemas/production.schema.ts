@@ -79,6 +79,8 @@ export const productionRecordResponseSchema = z
     userId: z.uuid(),
     syncStatus: z.enum(["SYNCED", "PENDING", "CONFLICT", "DELETED"]),
     syncVersion: z.number(),
+    clientCreatedAt: z.iso.datetime().optional().describe("Fecha de creación en el dispositivo"),
+    clientUpdatedAt: z.iso.datetime().optional().describe("Fecha de modificación en el dispositivo"),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })

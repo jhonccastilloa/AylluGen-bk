@@ -242,6 +242,8 @@ export class BreedingService {
       userId: breeding.userId,
       syncStatus: breeding.syncStatus,
       syncVersion: breeding.syncVersion,
+      clientCreatedAt: (breeding.clientCreatedAt ?? breeding.createdAt).toISOString(),
+      clientUpdatedAt: (breeding.clientUpdatedAt ?? breeding.updatedAt).toISOString(),
       createdAt: breeding.createdAt.toISOString(),
       updatedAt: breeding.updatedAt.toISOString(),
     };

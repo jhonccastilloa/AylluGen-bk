@@ -55,6 +55,8 @@ model Animal {
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   syncStatus        SyncStatus         @default(SYNCED)
   syncVersion       Int                @default(1)
+  clientCreatedAt DateTime @default(now())
+  clientUpdatedAt DateTime @default(now())
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   deletedAt         DateTime?
@@ -97,6 +99,8 @@ model Breeding {
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   syncStatus   SyncStatus @default(SYNCED)
   syncVersion  Int        @default(1)
+  clientCreatedAt DateTime @default(now())
+  clientUpdatedAt DateTime @default(now())
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -119,6 +123,8 @@ model HealthRecord {
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   syncStatus  SyncStatus @default(SYNCED)
   syncVersion Int        @default(1)
+  clientCreatedAt DateTime @default(now())
+  clientUpdatedAt DateTime @default(now())
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -143,6 +149,8 @@ model ProductionRecord {
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   syncStatus   SyncStatus     @default(SYNCED)
   syncVersion  Int            @default(1)
+  clientCreatedAt DateTime @default(now())
+  clientUpdatedAt DateTime @default(now())
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

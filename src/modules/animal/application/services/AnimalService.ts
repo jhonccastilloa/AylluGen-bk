@@ -235,6 +235,8 @@ export class AnimalService {
       userId: animal.userId,
       syncStatus: animal.syncStatus,
       syncVersion: animal.syncVersion,
+      clientCreatedAt: (animal.clientCreatedAt ?? animal.createdAt).toISOString(),
+      clientUpdatedAt: (animal.clientUpdatedAt ?? animal.updatedAt).toISOString(),
       createdAt: animal.createdAt.toISOString(),
       updatedAt: animal.updatedAt.toISOString(),
       deletedAt: animal.deletedAt?.toISOString() || null,

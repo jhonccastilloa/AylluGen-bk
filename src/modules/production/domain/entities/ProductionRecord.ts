@@ -28,6 +28,8 @@ export interface ProductionRecord {
   userId: string;
   syncStatus: SyncStatus;
   syncVersion: number;
+  clientCreatedAt?: Date;
+  clientUpdatedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -35,7 +35,7 @@ export class AnimalRepository implements IAnimalRepository {
     const animals = await (prisma.animal as any).findMany({
       where: includeDeleted ? { userId } : { userId, deletedAt: null },
       include: { speciesCatalog: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { clientCreatedAt: "desc" },
     });
 
     return animals.map((item: any) => this.mapToEntity(item));
@@ -52,7 +52,7 @@ export class AnimalRepository implements IAnimalRepository {
   async update(id: string, data: AnimalUpdateDTO): Promise<Animal> {
     const animal = await (prisma.animal as any).update({
       where: { id },
-      data: { ...data, syncVersion: { increment: 1 } },
+      data: { ...data, clientUpdatedAt: new Date(), syncVersion: { increment: 1 } },
       include: { speciesCatalog: true },
     });
 
@@ -174,6 +174,8 @@ export class AnimalRepository implements IAnimalRepository {
       userId: data.userId,
       syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
+      clientCreatedAt: data.clientCreatedAt ?? data.createdAt,
+      clientUpdatedAt: data.clientUpdatedAt ?? data.updatedAt,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       deletedAt: data.deletedAt ?? undefined,

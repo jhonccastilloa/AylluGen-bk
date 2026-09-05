@@ -163,7 +163,8 @@ export class SyncService {
       }
 
       let updateData = this.transformForUpdate(change.data);
-      if (change.tableName === "animals") {
+      if (change.tableName === "animals" &&
+          ["speciesId", "speciesCode", "species"].some(key => key in updateData)) {
         updateData = await this.normalizeAnimalPayloadForPersistence(
           userId,
           updateData,
@@ -237,8 +238,12 @@ export class SyncService {
     const result: any = {};
 
     for (const key in data) {
-      if (key !== "id" && key !== "userId") {
-        if (typeof data[key] === "string" && this.isDateString(data[key])) {
+      if (!["id", "userId", "createdAt", "updatedAt", "syncStatus", "syncVersion"].includes(key)) {
+        if (["clientCreatedAt", "clientUpdatedAt"].includes(key) &&
+            (typeof data[key] !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(data[key]) || !this.isDateString(data[key]))) {
+          throw new ValidationError(`Invalid ${key}`);
+        }
+        if (["birthDate", "breedingDate", "date", "nextDueDate", "deletedAt", "clientCreatedAt", "clientUpdatedAt"].includes(key) && typeof data[key] === "string" && this.isDateString(data[key])) {
           result[key] = new Date(data[key]);
         } else {
           result[key] = data[key];
@@ -250,11 +255,16 @@ export class SyncService {
   }
 
   private transformForUpdate(data: any): any {
-    const result: any = {};
+    // Legacy clients have no action date; use reception time as a fallback.
+    const result: any = { clientUpdatedAt: new Date() };
 
     for (const key in data) {
-      if (key !== "id" && key !== "userId") {
-        if (typeof data[key] === "string" && this.isDateString(data[key])) {
+      if (!["id", "userId", "createdAt", "updatedAt", "clientCreatedAt", "syncStatus", "syncVersion"].includes(key)) {
+        if (key === "clientUpdatedAt" &&
+            (typeof data[key] !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(data[key]) || !this.isDateString(data[key]))) {
+          throw new ValidationError(`Invalid ${key}`);
+        }
+        if (["birthDate", "breedingDate", "date", "nextDueDate", "deletedAt", "clientUpdatedAt"].includes(key) && typeof data[key] === "string" && this.isDateString(data[key])) {
           result[key] = new Date(data[key]);
         } else {
           result[key] = data[key];

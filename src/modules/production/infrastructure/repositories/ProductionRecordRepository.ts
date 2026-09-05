@@ -76,7 +76,7 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
   ): Promise<ProductionRecord> {
     const record = await (prisma.productionRecord as any).update({
       where: { id },
-      data: { ...data, syncVersion: { increment: 1 } },
+      data: { ...data, clientUpdatedAt: new Date(), syncVersion: { increment: 1 } },
       include: { animal: { include: { speciesCatalog: true } } },
     });
 
@@ -174,6 +174,8 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
       userId: data.userId,
       syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
+      clientCreatedAt: data.clientCreatedAt ?? data.createdAt,
+      clientUpdatedAt: data.clientUpdatedAt ?? data.updatedAt,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };
@@ -194,6 +196,8 @@ export class ProductionRecordRepository implements IProductionRecordRepository {
       userId: data.userId,
       syncStatus: data.syncStatus as AnimalSyncStatus,
       syncVersion: data.syncVersion,
+      clientCreatedAt: data.clientCreatedAt ?? data.createdAt,
+      clientUpdatedAt: data.clientUpdatedAt ?? data.updatedAt,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       deletedAt: data.deletedAt ?? undefined,

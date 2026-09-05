@@ -113,7 +113,7 @@ export class HealthRecordRepository implements IHealthRecordRepository {
   ): Promise<HealthRecord> {
     const record = await (prisma.healthRecord as any).update({
       where: { id },
-      data: { ...data, syncVersion: { increment: 1 } },
+      data: { ...data, clientUpdatedAt: new Date(), syncVersion: { increment: 1 } },
       include: { animal: { include: { speciesCatalog: true } } },
     });
 
@@ -157,6 +157,8 @@ export class HealthRecordRepository implements IHealthRecordRepository {
       userId: data.userId,
       syncStatus: data.syncStatus as SyncStatus,
       syncVersion: data.syncVersion,
+      clientCreatedAt: data.clientCreatedAt ?? data.createdAt,
+      clientUpdatedAt: data.clientUpdatedAt ?? data.updatedAt,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };
@@ -177,6 +179,8 @@ export class HealthRecordRepository implements IHealthRecordRepository {
       userId: data.userId,
       syncStatus: data.syncStatus as AnimalSyncStatus,
       syncVersion: data.syncVersion,
+      clientCreatedAt: data.clientCreatedAt ?? data.createdAt,
+      clientUpdatedAt: data.clientUpdatedAt ?? data.updatedAt,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       deletedAt: data.deletedAt ?? undefined,
