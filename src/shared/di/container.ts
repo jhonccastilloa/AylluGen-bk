@@ -37,9 +37,21 @@ import { HealthRecordController } from "../../modules/health/presentation/contro
 import { ProductionRecordController } from "../../modules/production/presentation/controllers/ProductionRecordController";
 import { SyncController } from "../../modules/sync/presentation/controllers/SyncController";
 import { SpeciesController } from "../../modules/species/presentation/controllers/SpeciesController";
+import { WatermelonRepository } from "../../modules/sync/infrastructure/repositories/WatermelonRepository";
+import {
+  TYPE_IWatermelonRepository,
+  IWatermelonRepository,
+} from "../../modules/sync/domain/repositories/IWatermelonRepository";
+import { WatermelonService } from "../../modules/sync/application/services/WatermelonService";
+import { WatermelonController } from "../../modules/sync/presentation/controllers/WatermelonController";
 
 // Crear contenedor con alcance Singleton
 const container = new Container({ defaultScope: "Singleton" });
+container
+  .bind<IWatermelonRepository>(TYPE_IWatermelonRepository)
+  .to(WatermelonRepository);
+container.bind(WatermelonService).toSelf();
+container.bind(WatermelonController).toSelf();
 
 // ============ BINDEOS DE REPOSITORIOS ============
 container.bind<UserRepository>(TYPES.IUserRepository).to(UserRepository);
@@ -57,7 +69,9 @@ container
   .bind<ProductionRecordRepository>(TYPES.IProductionRecordRepository)
   .to(ProductionRecordRepository);
 container.bind<SyncRepository>(TYPES.ISyncRepository).to(SyncRepository);
-container.bind<SpeciesRepository>(TYPES.ISpeciesRepository).to(SpeciesRepository);
+container
+  .bind<SpeciesRepository>(TYPES.ISpeciesRepository)
+  .to(SpeciesRepository);
 
 // ============ BINDEOS DE SERVICIOS ============
 container.bind<AuthService>(TYPES.AuthService).to(AuthService);
@@ -87,6 +101,8 @@ container
   .bind<ProductionRecordController>(TYPES.ProductionRecordController)
   .to(ProductionRecordController);
 container.bind<SyncController>(TYPES.SyncController).to(SyncController);
-container.bind<SpeciesController>(TYPES.SpeciesController).to(SpeciesController);
+container
+  .bind<SpeciesController>(TYPES.SpeciesController)
+  .to(SpeciesController);
 
 export { container, TYPES };

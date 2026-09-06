@@ -1,25 +1,25 @@
-import { AuthService } from "../../../src/modules/auth/application/services/AuthService";
-import { IUserRepository } from "../../../src/modules/user/domain/repositories/IUserRepository";
-import { IRefreshTokenRepository } from "../../../src/modules/auth/domain/repositories/IRefreshTokenRepository";
-import { User } from "../../../src/modules/user/domain/entities/User";
-import { RefreshToken } from "../../../src/modules/auth/domain/entities/RefreshToken";
+import { AuthService } from "../../../../src/modules/auth/application/services/AuthService";
+import { IUserRepository } from "../../../../src/modules/user/domain/repositories/IUserRepository";
+import { IRefreshTokenRepository } from "../../../../src/modules/auth/domain/repositories/IRefreshTokenRepository";
+import { User } from "../../../../src/modules/user/domain/entities/User";
+import { RefreshToken } from "../../../../src/modules/auth/domain/entities/RefreshToken";
 import {
   ConflictError,
   AuthenticationError,
   NotFoundError,
-} from "../../../src/shared/errors/AppError";
-import { TYPES } from "../../../src/shared/di/types";
+} from "../../../../src/shared/errors/AppError";
+import { TYPES } from "../../../../src/shared/di/types";
 import { Container } from "inversify";
-import { hashPassword } from "../../../src/shared/utils/bcrypt";
+import { hashPassword } from "../../../../src/shared/utils/bcrypt";
 import {
   generateAccessToken,
   generateRefreshToken,
-} from "../../../src/shared/utils/jwt";
-import { transaction } from "../../../src/infrastructure/database/prisma/client";
+} from "../../../../src/shared/utils/jwt";
+import { transaction } from "../../../../src/infrastructure/database/prisma/client";
 
-jest.mock("../../../src/infrastructure/database/prisma/client");
-jest.mock("../../../src/shared/utils/bcrypt");
-jest.mock("../../../src/shared/utils/jwt");
+jest.mock("../../../../src/infrastructure/database/prisma/client");
+jest.mock("../../../../src/shared/utils/bcrypt");
+jest.mock("../../../../src/shared/utils/jwt");
 
 describe("AuthService", () => {
   let authService: AuthService;
@@ -44,7 +44,7 @@ describe("AuthService", () => {
   };
 
   beforeEach(() => {
-    container = new Container();
+    container = new Container({ autobind: true });
     userRepository = {
       findById: jest.fn(),
       findByDni: jest.fn(),
@@ -132,7 +132,9 @@ describe("AuthService", () => {
       (generateAccessToken as jest.Mock).mockReturnValue("access-token");
       (generateRefreshToken as jest.Mock).mockReturnValue("refresh-token");
 
-      const { comparePassword } = require("../../../src/shared/utils/bcrypt");
+      const {
+        comparePassword,
+      } = require("../../../../src/shared/utils/bcrypt");
       comparePassword.mockResolvedValue(true);
 
       const result = await authService.login({
@@ -167,7 +169,9 @@ describe("AuthService", () => {
     it("should throw AuthenticationError when password is invalid", async () => {
       userRepository.findByDni.mockResolvedValue(mockUser);
 
-      const { comparePassword } = require("../../../src/shared/utils/bcrypt");
+      const {
+        comparePassword,
+      } = require("../../../../src/shared/utils/bcrypt");
       comparePassword.mockResolvedValue(false);
 
       await expect(
@@ -188,7 +192,9 @@ describe("AuthService", () => {
       (generateAccessToken as jest.Mock).mockReturnValue("new-access-token");
       (generateRefreshToken as jest.Mock).mockReturnValue("new-refresh-token");
 
-      const { verifyRefreshToken } = require("../../../src/shared/utils/jwt");
+      const {
+        verifyRefreshToken,
+      } = require("../../../../src/shared/utils/jwt");
       verifyRefreshToken.mockReturnValue({
         userId: mockUser.id,
         dni: mockUser.dni,
@@ -242,7 +248,9 @@ describe("AuthService", () => {
       refreshTokenRepository.findByToken.mockResolvedValue(mockRefreshToken);
       userRepository.findById.mockResolvedValue(null);
 
-      const { verifyRefreshToken } = require("../../../src/shared/utils/jwt");
+      const {
+        verifyRefreshToken,
+      } = require("../../../../src/shared/utils/jwt");
       verifyRefreshToken.mockReturnValue({
         userId: mockUser.id,
         dni: mockUser.dni,

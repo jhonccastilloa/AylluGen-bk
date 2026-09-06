@@ -4,8 +4,8 @@ import {
   verifyToken,
   verifyRefreshToken,
   TokenPayload,
-} from "../../src/shared/utils/jwt";
-import { TOKEN_CONFIG } from "../../src/shared/constants/tokens";
+} from "../../../src/shared/utils/jwt";
+import { TOKEN_CONFIG } from "../../../src/shared/constants/tokens";
 
 describe("JWT Utils", () => {
   const mockPayload: TokenPayload = {
@@ -75,7 +75,7 @@ describe("JWT Utils", () => {
     });
 
     it("should throw error for expired token", () => {
-      const expiredPayload: TokenPayload = {
+      const expiredPayload: TokenPayload & { exp: number } = {
         userId: mockPayload.userId,
         dni: mockPayload.dni,
         exp: Math.floor(Date.now() / 1000) - 3600,

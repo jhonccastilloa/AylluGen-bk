@@ -1,4 +1,7 @@
-import { sanitize, sanitizeString } from "../../src/shared/logging/sanitizer";
+import {
+  sanitize,
+  sanitizeString,
+} from "../../../src/shared/logging/sanitizer";
 
 describe("Log Sanitizer", () => {
   describe("sanitize", () => {
@@ -9,11 +12,11 @@ describe("Log Sanitizer", () => {
         email: "test@example.com",
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
       expect(result.password).toBe("[REDACTED]");
       expect(result.username).toBe("testuser");
-      expect(result.email).toBe("test@example.com");
+      expect(result.email).toBe("[REDACTED]");
     });
 
     it("should sanitize token field", () => {
@@ -22,7 +25,7 @@ describe("Log Sanitizer", () => {
         refreshToken: "another.token.value",
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
       expect(result.token).toBe("[REDACTED]");
       expect(result.refreshToken).toBe("[REDACTED]");
@@ -34,7 +37,7 @@ describe("Log Sanitizer", () => {
         name: "My App",
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
       expect(result.apiKey).toBe("[REDACTED]");
       expect(result.name).toBe("My App");
@@ -51,7 +54,7 @@ describe("Log Sanitizer", () => {
         },
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
       expect(result.user.password).toBe("[REDACTED]");
       expect(result.user.name).toBe("Test User");
@@ -66,7 +69,7 @@ describe("Log Sanitizer", () => {
         ],
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
       expect(result.users[0].password).toBe("[REDACTED]");
       expect(result.users[1].password).toBe("[REDACTED]");
@@ -82,7 +85,7 @@ describe("Log Sanitizer", () => {
         undefinedValue: undefined,
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
       expect(result.password).toBe("[REDACTED]");
       expect(result.nullValue).toBeNull();
@@ -96,7 +99,7 @@ describe("Log Sanitizer", () => {
         password: "Secret123",
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as { password: string; date: string };
 
       expect(result.password).toBe("[REDACTED]");
       expect(result.date).toBe(date.toISOString());
@@ -109,7 +112,7 @@ describe("Log Sanitizer", () => {
         password: "Secret123",
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as { password: string; error: unknown };
 
       expect(result.password).toBe("[REDACTED]");
       expect(result.error).toEqual({
@@ -127,7 +130,7 @@ describe("Log Sanitizer", () => {
         passWord: "mixedcase",
       };
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
       expect(result.Password).toBe("[REDACTED]");
       expect(result.PASSWORD).toBe("[REDACTED]");
@@ -149,9 +152,11 @@ describe("Log Sanitizer", () => {
         current = current.nested;
       }
 
-      const result = sanitize(data);
+      const result = sanitize(data) as typeof data;
 
-      expect(result).toEqual("[MAX_DEPTH_REACHED]");
+      let nested = result;
+      for (let depth = 0; depth < 11; depth++) nested = nested.nested;
+      expect(nested).toEqual("[MAX_DEPTH_REACHED]");
     });
 
     it("should limit array length", () => {
@@ -160,7 +165,7 @@ describe("Log Sanitizer", () => {
         password: `password${i}`,
       }));
 
-      const result = sanitize(largeArray);
+      const result = sanitize(largeArray) as typeof largeArray;
 
       expect(result.length).toBe(101);
       expect(result[100]).toBe("[...50 more items]");

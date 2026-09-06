@@ -17,6 +17,9 @@ model User {
   breedings         Breeding[]
   healthRecords     HealthRecord[]
   productionRecords ProductionRecord[]
+  syncClock         SyncClock?
+  syncRecords       SyncRecord[]
+  syncReceipts      SyncReceipt[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -64,6 +67,8 @@ model Animal {
   @@unique([userId, crotal])
   @@index([userId])
   @@index([speciesId])
+  @@index([fatherId])
+  @@index([motherId])
   @@map("animals")
 }
 
@@ -107,6 +112,7 @@ model Breeding {
   @@index([userId])
   @@index([maleId])
   @@index([femaleId])
+  @@index([offspringId])
   @@map("breedings")
 }
 
@@ -174,6 +180,43 @@ model SyncLog {
   @@index([userId])
   @@index([status])
   @@map("sync_logs")
+}
+
+// Infrastructure state. Versions are assigned by PostgreSQL triggers, never clients.
+model SyncClock {
+  userId  String @id
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version BigInt @default(1)
+
+  @@map("sync_clocks")
+}
+
+model SyncRecord {
+  tableName      String
+  recordId       String
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdVersion BigInt
+  version        BigInt
+  deleted        Boolean  @default(false)
+  data           Json?
+  changedAt      DateTime @default(now())
+
+  @@id([tableName, recordId])
+  @@index([userId, version])
+  @@index([userId, tableName])
+  @@index([recordId])
+  @@map("sync_records")
+}
+
+model SyncReceipt {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hash      String
+  createdAt DateTime @default(now())
+
+  @@id([userId, hash])
+  @@map("sync_receipts")
 }
 
 enum Sex {

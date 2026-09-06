@@ -4,6 +4,7 @@ import { UserResponse, UpdateUserDTO } from "../schemas/user.schema";
 import { NotFoundError } from "../../../../shared/errors/AppError";
 import { UserMapper } from "../../../../shared/mappers/UserMapper";
 import { TYPES } from "../../../../shared/di/types";
+import { hashPassword } from "../../../../shared/utils/bcrypt";
 
 @injectable()
 export class UserService {
@@ -24,7 +25,11 @@ export class UserService {
   }
 
   async updateUser(id: string, data: UpdateUserDTO): Promise<UserResponse> {
-    const user = await this.userRepository.update(id, data);
+    const update =
+      data.password === undefined
+        ? data
+        : { ...data, password: await hashPassword(data.password) };
+    const user = await this.userRepository.update(id, update);
     return UserMapper.toResponse(user);
   }
 

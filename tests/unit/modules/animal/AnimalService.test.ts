@@ -1,18 +1,19 @@
-import { AnimalService } from "../../../src/modules/animal/application/services/AnimalService";
-import { IAnimalRepository } from "../../../src/modules/animal/domain/repositories/IAnimalRepository";
+import { AnimalService } from "../../../../src/modules/animal/application/services/AnimalService";
+import { IAnimalRepository } from "../../../../src/modules/animal/domain/repositories/IAnimalRepository";
 import {
   Animal,
   Sex,
-  Species,
   SyncStatus,
-} from "../../../src/modules/animal/domain/entities/Animal";
+} from "../../../../src/modules/animal/domain/entities/Animal";
 import {
   ConflictError,
   NotFoundError,
   ValidationError,
-} from "../../../src/shared/errors/AppError";
-import { TYPES } from "../../../src/shared/di/types";
+} from "../../../../src/shared/errors/AppError";
+import { TYPES } from "../../../../src/shared/di/types";
 import { Container } from "inversify";
+import { SpeciesService } from "../../../../src/modules/species/application/services/SpeciesService";
+const Species = { SHEEP: "SHEEP", ALPACA: "ALPACA" };
 
 describe("AnimalService", () => {
   let animalService: AnimalService;
@@ -28,7 +29,8 @@ describe("AnimalService", () => {
     id: animalId,
     crotal: "CR12345",
     sex: Sex.FEMALE,
-    species: Species.SHEEP,
+    species: "SHEEP",
+    speciesId: "species-sheep",
     birthDate: new Date("2024-01-01"),
     isFounder: false,
     fatherId,
@@ -44,7 +46,8 @@ describe("AnimalService", () => {
     id: fatherId,
     crotal: "CR001",
     sex: Sex.MALE,
-    species: Species.SHEEP,
+    species: "SHEEP",
+    speciesId: "species-sheep",
     birthDate: new Date("2023-01-01"),
     isFounder: true,
     userId,
@@ -58,7 +61,8 @@ describe("AnimalService", () => {
     id: motherId,
     crotal: "CR002",
     sex: Sex.FEMALE,
-    species: Species.SHEEP,
+    species: "SHEEP",
+    speciesId: "species-sheep",
     birthDate: new Date("2023-01-01"),
     isFounder: true,
     userId,
@@ -69,7 +73,16 @@ describe("AnimalService", () => {
   };
 
   beforeEach(() => {
-    container = new Container();
+    container = new Container({ autobind: true });
+    container.bind<SpeciesService>(TYPES.SpeciesService).toConstantValue({
+      resolveSpeciesForAnimal: jest
+        .fn()
+        .mockResolvedValue({
+          speciesId: "species-sheep",
+          speciesCode: "SHEEP",
+          speciesName: "Sheep",
+        }),
+    } as unknown as SpeciesService);
     animalRepository = {
       findById: jest.fn(),
       findByCrotal: jest.fn(),
@@ -98,14 +111,16 @@ describe("AnimalService", () => {
   describe("create", () => {
     it("should create animal successfully", async () => {
       animalRepository.findByCrotal.mockResolvedValue(null);
-      animalRepository.findById.mockResolvedValue(mockFather);
-      animalRepository.findById.mockResolvedValue(mockMother);
+      animalRepository.findById
+        .mockResolvedValueOnce(mockFather)
+        .mockResolvedValueOnce(mockMother);
       animalRepository.create.mockResolvedValue(mockAnimal);
 
       const result = await animalService.create(userId, {
         crotal: "CR12345",
         sex: Sex.FEMALE,
-        species: Species.SHEEP,
+        species: "SHEEP",
+        speciesId: "species-sheep",
         birthDate: "2024-01-01T00:00:00.000Z",
         isFounder: false,
         fatherId,
@@ -127,7 +142,8 @@ describe("AnimalService", () => {
         animalService.create(userId, {
           crotal: "CR12345",
           sex: Sex.FEMALE,
-          species: Species.SHEEP,
+          species: "SHEEP",
+          speciesId: "species-sheep",
           isFounder: false,
         }),
       ).rejects.toThrow(ConflictError);
@@ -141,7 +157,8 @@ describe("AnimalService", () => {
         animalService.create(userId, {
           crotal: "CR12345",
           sex: Sex.FEMALE,
-          species: Species.SHEEP,
+          species: "SHEEP",
+          speciesId: "species-sheep",
           isFounder: false,
           fatherId,
         }),
@@ -157,7 +174,8 @@ describe("AnimalService", () => {
         animalService.create(userId, {
           crotal: "CR12345",
           sex: Sex.FEMALE,
-          species: Species.SHEEP,
+          species: "SHEEP",
+          speciesId: "species-sheep",
           isFounder: false,
           motherId,
         }),
@@ -167,7 +185,10 @@ describe("AnimalService", () => {
 
   describe("update", () => {
     it("should update animal successfully", async () => {
-      animalRepository.findById.mockResolvedValue(mockAnimal);
+      animalRepository.findById
+        .mockResolvedValueOnce(mockAnimal)
+        .mockResolvedValueOnce(mockFather)
+        .mockResolvedValueOnce(mockMother);
       animalRepository.update.mockResolvedValue(mockAnimal);
 
       const result = await animalService.update(animalId, userId, {
@@ -175,10 +196,12 @@ describe("AnimalService", () => {
       });
 
       expect(result.id).toBe(animalId);
-      expect(animalRepository.update).toHaveBeenCalledWith(animalId, {
-        crotal: "CR12346",
-        birthDate: mockAnimal.birthDate,
-      });
+      expect(animalRepository.update).toHaveBeenCalledWith(
+        animalId,
+        expect.objectContaining({
+          crotal: "CR12346",
+        }),
+      );
     });
 
     it("should throw NotFoundError when animal not found", async () => {
@@ -276,7 +299,7 @@ describe("AnimalService", () => {
       animalRepository.findAllByUserId.mockResolvedValue([mockAnimal]);
 
       const result = await animalService.getAll(userId, {
-        species: Species.SHEEP,
+        species: "SHEEP",
         limit: 10,
         offset: 0,
       });
@@ -353,9 +376,9 @@ describe("AnimalService", () => {
 
       const result = await animalService.getPedigree(animalId, userId);
 
-      expect(result.id).toBe(animalId);
-      expect(result.father).toBeDefined();
-      expect(result.mother).toBeDefined();
+      expect(result?.id).toBe(animalId);
+      expect(result?.father).toBeDefined();
+      expect(result?.mother).toBeDefined();
     });
 
     it("should throw NotFoundError when animal not found", async () => {

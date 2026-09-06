@@ -19,6 +19,7 @@ import {
   Sex,
 } from "../../domain/entities/Animal";
 import { SpeciesService } from "../../../species/application/services/SpeciesService";
+import { validateParents } from "../../domain/services/AnimalRules";
 
 @injectable()
 export class AnimalService {
@@ -231,12 +232,17 @@ export class AnimalService {
       motherId: animal.motherId || null,
       father: animal.father ? this.mapToResponse(animal.father) : undefined,
       mother: animal.mother ? this.mapToResponse(animal.mother) : undefined,
-      children: animal.children?.map((child) => this.mapToResponse(child)) || [],
+      children:
+        animal.children?.map((child) => this.mapToResponse(child)) || [],
       userId: animal.userId,
       syncStatus: animal.syncStatus,
       syncVersion: animal.syncVersion,
-      clientCreatedAt: (animal.clientCreatedAt ?? animal.createdAt).toISOString(),
-      clientUpdatedAt: (animal.clientUpdatedAt ?? animal.updatedAt).toISOString(),
+      clientCreatedAt: (
+        animal.clientCreatedAt ?? animal.createdAt
+      ).toISOString(),
+      clientUpdatedAt: (
+        animal.clientUpdatedAt ?? animal.updatedAt
+      ).toISOString(),
       createdAt: animal.createdAt.toISOString(),
       updatedAt: animal.updatedAt.toISOString(),
       deletedAt: animal.deletedAt?.toISOString() || null,
@@ -250,67 +256,12 @@ export class AnimalService {
     motherId?: string;
     childId?: string;
   }): Promise<void> {
-    const { userId, childSpeciesId, fatherId, motherId, childId } = input;
-
-    let father: Animal | null = null;
-    let mother: Animal | null = null;
-
-    if (fatherId) {
-      father = await this.animalRepository.findById(fatherId);
-      if (!father) {
-        throw new NotFoundError("Animal padre no encontrado");
-      }
-      if (father.userId !== userId) {
-        throw new ValidationError("El padre no pertenece al usuario autenticado");
-      }
-      if (father.sex !== Sex.MALE) {
-        throw new ValidationError("El animal seleccionado como padre debe ser macho");
-      }
-      if (childId && father.id === childId) {
-        throw new ValidationError("Un animal no puede ser su propio padre");
-      }
-    }
-
-    if (motherId) {
-      mother = await this.animalRepository.findById(motherId);
-      if (!mother) {
-        throw new NotFoundError("Animal madre no encontrado");
-      }
-      if (mother.userId !== userId) {
-        throw new ValidationError("La madre no pertenece al usuario autenticado");
-      }
-      if (mother.sex !== Sex.FEMALE) {
-        throw new ValidationError(
-          "El animal seleccionado como madre debe ser hembra",
-        );
-      }
-      if (childId && mother.id === childId) {
-        throw new ValidationError("Un animal no puede ser su propia madre");
-      }
-    }
-
-    if (father && mother && father.id === mother.id) {
-      throw new ValidationError(
-        "El padre y la madre deben ser animales diferentes",
-      );
-    }
-
-    if (father && mother && father.speciesId !== mother.speciesId) {
-      throw new ValidationError(
-        "El padre y la madre deben ser de la misma especie",
-      );
-    }
-
-    if (father && father.speciesId !== childSpeciesId) {
-      throw new ValidationError(
-        "La especie de la cría debe coincidir con la especie del padre",
-      );
-    }
-
-    if (mother && mother.speciesId !== childSpeciesId) {
-      throw new ValidationError(
-        "La especie de la cría debe coincidir con la especie de la madre",
-      );
-    }
+    const father = input.fatherId
+      ? await this.animalRepository.findById(input.fatherId)
+      : null;
+    const mother = input.motherId
+      ? await this.animalRepository.findById(input.motherId)
+      : null;
+    validateParents(input, father, mother);
   }
 }

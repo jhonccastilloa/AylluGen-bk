@@ -1,17 +1,17 @@
 import {
   ConflictError,
+  ZodValidationError,
   ValidationError,
   AuthenticationError,
-} from "../../src/shared/errors/AppError";
+} from "../../../src/shared/errors/AppError";
 import {
   ZodValidationErrorHandler,
   AppErrorHandler,
-} from "../../src/presentation/middlewares/error-handlers/index";
+} from "../../../src/presentation/middlewares/error-handlers/index";
 
 describe("Error Handlers", () => {
   let mockReq: any;
   let mockRes: any;
-  let next: jest.Mock;
 
   beforeEach(() => {
     mockReq = {
@@ -27,8 +27,6 @@ describe("Error Handlers", () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
-
-    next = jest.fn();
   });
 
   describe("ZodValidationErrorHandler", () => {
@@ -39,7 +37,7 @@ describe("Error Handlers", () => {
     });
 
     it("should handle ZodValidationError correctly", () => {
-      const error = new ValidationError([
+      const error = new ZodValidationError([
         { path: ["field"], message: "Required" },
       ]);
 

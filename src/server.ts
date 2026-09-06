@@ -33,6 +33,7 @@ class App {
       }),
     );
     // this.app.use(generalLimiter);
+    this.app.use("/api/sync/v2", express.json({ limit: "2mb" }));
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(requestLogger);

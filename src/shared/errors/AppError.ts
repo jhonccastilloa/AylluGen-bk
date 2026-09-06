@@ -17,7 +17,7 @@ export abstract class AppError extends Error {
     this.type = type;
     this.isOperational = isOperational;
 
-    Object.setPrototypeOf(this, AppError.prototype);
+    Object.setPrototypeOf(this, new.target.prototype);
     Error.captureStackTrace(this, this.constructor);
   }
 }

@@ -72,6 +72,7 @@ export class SyncService {
     tableName: string,
     recordId: string,
     resolution: string,
+    userId: string,
   ): Promise<void> {
     if (resolution === "server") {
       const record = await this.getPrismaTable(tableName).findUnique({
@@ -81,13 +82,15 @@ export class SyncService {
       if (!record) {
         throw new NotFoundError("Record not found");
       }
+      if (record.userId !== userId)
+        throw new ValidationError("Record not available");
 
       await this.getPrismaTable(tableName).update({
         where: { id: recordId },
         data: { syncStatus: "SYNCED" },
       });
     } else {
-      await this.syncRepository.deleteLogs("", new Date());
+      await this.syncRepository.deleteLogs(userId, new Date());
     }
   }
 
@@ -128,6 +131,8 @@ export class SyncService {
       });
 
       if (existing) {
+        if (existing.userId !== userId)
+          throw new ValidationError("Record not available");
         return { conflict: true, serverVersion: existing };
       }
 
@@ -163,8 +168,10 @@ export class SyncService {
       }
 
       let updateData = this.transformForUpdate(change.data);
-      if (change.tableName === "animals" &&
-          ["speciesId", "speciesCode", "species"].some(key => key in updateData)) {
+      if (
+        change.tableName === "animals" &&
+        ["speciesId", "speciesCode", "species"].some((key) => key in updateData)
+      ) {
         updateData = await this.normalizeAnimalPayloadForPersistence(
           userId,
           updateData,
@@ -235,15 +242,41 @@ export class SyncService {
   }
 
   private transformForCreate(data: any): any {
+    this.validateLegacyColumns(data);
     const result: any = {};
 
     for (const key in data) {
-      if (!["id", "userId", "createdAt", "updatedAt", "syncStatus", "syncVersion"].includes(key)) {
-        if (["clientCreatedAt", "clientUpdatedAt"].includes(key) &&
-            (typeof data[key] !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(data[key]) || !this.isDateString(data[key]))) {
+      if (
+        ![
+          "id",
+          "userId",
+          "createdAt",
+          "updatedAt",
+          "syncStatus",
+          "syncVersion",
+        ].includes(key)
+      ) {
+        if (
+          ["clientCreatedAt", "clientUpdatedAt"].includes(key) &&
+          (typeof data[key] !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}T/.test(data[key]) ||
+            !this.isDateString(data[key]))
+        ) {
           throw new ValidationError(`Invalid ${key}`);
         }
-        if (["birthDate", "breedingDate", "date", "nextDueDate", "deletedAt", "clientCreatedAt", "clientUpdatedAt"].includes(key) && typeof data[key] === "string" && this.isDateString(data[key])) {
+        if (
+          [
+            "birthDate",
+            "breedingDate",
+            "date",
+            "nextDueDate",
+            "deletedAt",
+            "clientCreatedAt",
+            "clientUpdatedAt",
+          ].includes(key) &&
+          typeof data[key] === "string" &&
+          this.isDateString(data[key])
+        ) {
           result[key] = new Date(data[key]);
         } else {
           result[key] = data[key];
@@ -255,16 +288,42 @@ export class SyncService {
   }
 
   private transformForUpdate(data: any): any {
+    this.validateLegacyColumns(data);
     // Legacy clients have no action date; use reception time as a fallback.
     const result: any = { clientUpdatedAt: new Date() };
 
     for (const key in data) {
-      if (!["id", "userId", "createdAt", "updatedAt", "clientCreatedAt", "syncStatus", "syncVersion"].includes(key)) {
-        if (key === "clientUpdatedAt" &&
-            (typeof data[key] !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(data[key]) || !this.isDateString(data[key]))) {
+      if (
+        ![
+          "id",
+          "userId",
+          "createdAt",
+          "updatedAt",
+          "clientCreatedAt",
+          "syncStatus",
+          "syncVersion",
+        ].includes(key)
+      ) {
+        if (
+          key === "clientUpdatedAt" &&
+          (typeof data[key] !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}T/.test(data[key]) ||
+            !this.isDateString(data[key]))
+        ) {
           throw new ValidationError(`Invalid ${key}`);
         }
-        if (["birthDate", "breedingDate", "date", "nextDueDate", "deletedAt", "clientUpdatedAt"].includes(key) && typeof data[key] === "string" && this.isDateString(data[key])) {
+        if (
+          [
+            "birthDate",
+            "breedingDate",
+            "date",
+            "nextDueDate",
+            "deletedAt",
+            "clientUpdatedAt",
+          ].includes(key) &&
+          typeof data[key] === "string" &&
+          this.isDateString(data[key])
+        ) {
           result[key] = new Date(data[key]);
         } else {
           result[key] = data[key];
@@ -309,6 +368,49 @@ export class SyncService {
 
   private isDateString(str: string): boolean {
     return !isNaN(Date.parse(str));
+  }
+
+  private validateLegacyColumns(data: unknown): void {
+    if (!data || typeof data !== "object" || Array.isArray(data))
+      throw new ValidationError("Invalid record");
+    const allowed = new Set([
+      "id",
+      "userId",
+      "createdAt",
+      "updatedAt",
+      "syncStatus",
+      "syncVersion",
+      "clientCreatedAt",
+      "clientUpdatedAt",
+      "crotal",
+      "sex",
+      "speciesId",
+      "speciesCode",
+      "species",
+      "speciesName",
+      "birthDate",
+      "isFounder",
+      "fatherId",
+      "motherId",
+      "maleId",
+      "femaleId",
+      "projectedCOI",
+      "riskLevel",
+      "offspringId",
+      "breedingDate",
+      "notes",
+      "animalId",
+      "type",
+      "date",
+      "nextDueDate",
+      "completed",
+      "value",
+      "unit",
+      "qualityScore",
+      "deletedAt",
+    ]);
+    if (Object.keys(data).some((column) => !allowed.has(column)))
+      throw new ValidationError("Column not allowed");
   }
 
   private camelCase(str: string): string {

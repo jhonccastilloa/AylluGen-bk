@@ -8,8 +8,8 @@ const connectionString = config.databaseUrl;
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({
   adapter,
-  log:
-    config.nodeEnv === "development" ? ["query", "error", "warn"] : ["error"],
+  // Query/error logging can include private sync record values. Use service metadata.
+  log: ["warn"],
 });
 
 export { prisma };

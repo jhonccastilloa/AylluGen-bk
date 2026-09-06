@@ -11,7 +11,7 @@ import {
 export class SpeciesRepository implements ISpeciesRepository {
   async findById(id: string): Promise<Species | null> {
     const species = await (prisma as any).species.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
     });
     return species ? this.mapToEntity(species) : null;
   }
@@ -61,10 +61,16 @@ export class SpeciesRepository implements ISpeciesRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await (prisma as any).species.delete({ where: { id } });
+    await (prisma as any).species.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
-  async countAnimalsBySpeciesId(userId: string, speciesId: string): Promise<number> {
+  async countAnimalsBySpeciesId(
+    userId: string,
+    speciesId: string,
+  ): Promise<number> {
     return (prisma.animal as any).count({
       where: { userId, speciesId, deletedAt: null },
     });

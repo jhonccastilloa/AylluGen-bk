@@ -1,21 +1,20 @@
-import { HealthRecordService } from "../../../src/modules/health/application/services/HealthRecordService";
-import { IHealthRecordRepository } from "../../../src/modules/health/domain/repositories/IHealthRecordRepository";
-import { IAnimalRepository } from "../../../src/modules/animal/domain/repositories/IAnimalRepository";
+import { HealthRecordService } from "../../../../src/modules/health/application/services/HealthRecordService";
+import { IHealthRecordRepository } from "../../../../src/modules/health/domain/repositories/IHealthRecordRepository";
+import { IAnimalRepository } from "../../../../src/modules/animal/domain/repositories/IAnimalRepository";
 import {
   HealthRecord,
   HealthType,
   SyncStatus,
-} from "../../../src/modules/health/domain/entities/HealthRecord";
+} from "../../../../src/modules/health/domain/entities/HealthRecord";
 import {
   Animal,
   Sex,
-  Species,
-} from "../../../src/modules/animal/domain/entities/Animal";
+} from "../../../../src/modules/animal/domain/entities/Animal";
 import {
   NotFoundError,
   ValidationError,
-} from "../../../src/shared/errors/AppError";
-import { TYPES } from "../../../src/shared/di/types";
+} from "../../../../src/shared/errors/AppError";
+import { TYPES } from "../../../../src/shared/di/types";
 import { Container } from "inversify";
 
 describe("HealthRecordService", () => {
@@ -32,7 +31,8 @@ describe("HealthRecordService", () => {
     id: animalId,
     crotal: "CR12345",
     sex: Sex.FEMALE,
-    species: Species.SHEEP,
+    species: "SHEEP",
+    speciesId: "species-sheep",
     birthDate: new Date("2024-01-01"),
     isFounder: false,
     userId,
@@ -58,7 +58,7 @@ describe("HealthRecordService", () => {
   };
 
   beforeEach(() => {
-    container = new Container();
+    container = new Container({ autobind: true });
     healthRecordRepository = {
       findById: jest.fn(),
       findAllByUserId: jest.fn(),
@@ -128,6 +128,7 @@ describe("HealthRecordService", () => {
           animalId,
           type: HealthType.VACCINATION,
           date: "2024-01-01T00:00:00.000Z",
+          completed: true,
         }),
       ).rejects.toThrow(NotFoundError);
     });
@@ -141,6 +142,7 @@ describe("HealthRecordService", () => {
           animalId,
           type: HealthType.VACCINATION,
           date: "2024-01-01T00:00:00.000Z",
+          completed: true,
         }),
       ).rejects.toThrow(ValidationError);
     });

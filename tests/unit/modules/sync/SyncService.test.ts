@@ -1,14 +1,13 @@
-import { SyncService } from "../../../src/modules/sync/application/services/SyncService";
-import { ISyncRepository } from "../../../src/modules/sync/domain/repositories/ISyncRepository";
-import {
-  NotFoundError,
-  ValidationError,
-} from "../../../src/shared/errors/AppError";
-import { TYPES } from "../../../src/shared/di/types";
+import { SyncService } from "../../../../src/modules/sync/application/services/SyncService";
+import { ISyncRepository } from "../../../../src/modules/sync/domain/repositories/ISyncRepository";
+import { NotFoundError } from "../../../../src/shared/errors/AppError";
+import { TYPES } from "../../../../src/shared/di/types";
 import { Container } from "inversify";
-import { prisma } from "../../../src/infrastructure/database/prisma/client";
+import { SpeciesService } from "../../../../src/modules/species/application/services/SpeciesService";
+import { SyncAction } from "../../../../src/modules/sync/domain/entities/Sync";
+import { prisma } from "../../../../src/infrastructure/database/prisma/client";
 
-jest.mock("../../../src/infrastructure/database/prisma/client");
+jest.mock("../../../../src/infrastructure/database/prisma/client");
 
 describe("SyncService", () => {
   let syncService: SyncService;
@@ -24,7 +23,7 @@ describe("SyncService", () => {
     deviceId,
     changes: [
       {
-        action: "CREATE" as const,
+        action: SyncAction.CREATE,
         tableName: "animals",
         recordId,
         data: {
@@ -46,11 +45,33 @@ describe("SyncService", () => {
   };
 
   beforeEach(() => {
-    container = new Container();
+    container = new Container({ autobind: true });
+    container.bind<SpeciesService>(TYPES.SpeciesService).toConstantValue({
+      resolveSpeciesForAnimal: jest
+        .fn()
+        .mockResolvedValue({
+          speciesId: "species-sheep",
+          speciesCode: "SHEEP",
+        }),
+    } as unknown as SpeciesService);
+    for (const table of [
+      "animal",
+      "breeding",
+      "healthRecord",
+      "productionRecord",
+    ]) {
+      Object.assign(prisma, {
+        [table]: {
+          findUnique: jest.fn(),
+          create: jest.fn(),
+          update: jest.fn(),
+          delete: jest.fn(),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+      });
+    }
     syncRepository = {
       createLog: jest.fn(),
-      findPendingLogs: jest.fn(),
-      updateLogStatus: jest.fn(),
       deleteLogs: jest.fn(),
       findLatestSync: jest.fn(),
       saveLatestSync: jest.fn(),
@@ -122,7 +143,7 @@ describe("SyncService", () => {
         ...mockSyncPushData,
         changes: [
           {
-            action: "DELETE" as const,
+            action: SyncAction.DELETE,
             tableName: "animals",
             recordId,
             data: {},
@@ -151,7 +172,7 @@ describe("SyncService", () => {
         ...mockSyncPushData,
         changes: [
           {
-            action: "UPDATE" as const,
+            action: SyncAction.UPDATE,
             tableName: "animals",
             recordId,
             data: { crotal: "CR12346" },
@@ -184,7 +205,13 @@ describe("SyncService", () => {
       const result = await syncService.pullChanges(mockSyncPullData);
 
       expect(result.syncTimestamp).toBeDefined();
-      expect(result.animals).toEqual(mockAnimals);
+      expect(result.animals).toEqual(
+        mockAnimals.map((animal) => ({
+          ...animal,
+          species: null,
+          speciesName: null,
+        })),
+      );
     });
 
     it("should filter by lastSyncAt when provided", async () => {
@@ -199,9 +226,9 @@ describe("SyncService", () => {
       expect(prisma.animal.findMany).toHaveBeenCalledWith({
         where: {
           userId,
-          deletedAt: null,
           updatedAt: { gte: lastSyncDate },
         },
+        include: { speciesCatalog: true },
         orderBy: { updatedAt: "asc" },
       });
     });
@@ -234,10 +261,11 @@ describe("SyncService", () => {
     it("should resolve conflict with server version", async () => {
       (prisma.animal.findUnique as jest.Mock).mockResolvedValue({
         id: recordId,
+        userId,
       });
       (prisma.animal.update as jest.Mock).mockResolvedValue({ id: recordId });
 
-      await syncService.resolveConflict("animals", recordId, "server");
+      await syncService.resolveConflict("animals", recordId, "server", userId);
 
       expect(prisma.animal.findUnique).toHaveBeenCalledWith({
         where: { id: recordId },
@@ -252,15 +280,15 @@ describe("SyncService", () => {
       (prisma.animal.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        syncService.resolveConflict("animals", recordId, "server"),
+        syncService.resolveConflict("animals", recordId, "server", userId),
       ).rejects.toThrow(NotFoundError);
     });
 
     it("should handle client version resolution", async () => {
-      await syncService.resolveConflict("animals", recordId, "client");
+      await syncService.resolveConflict("animals", recordId, "client", userId);
 
       expect(syncRepository.deleteLogs).toHaveBeenCalledWith(
-        "",
+        userId,
         expect.any(Date),
       );
     });

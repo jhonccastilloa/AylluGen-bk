@@ -1,5 +1,5 @@
-import { UserMapper } from "../../src/shared/mappers/UserMapper";
-import { User } from "../../src/modules/user/domain/entities/User";
+import { UserMapper } from "../../../src/shared/mappers/UserMapper";
+import { User } from "../../../src/modules/user/domain/entities/User";
 
 describe("UserMapper", () => {
   const mockUser: User = {

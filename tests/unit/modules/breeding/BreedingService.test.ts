@@ -1,21 +1,20 @@
-import { BreedingService } from "../../../src/modules/breeding/application/services/BreedingService";
-import { IBreedingRepository } from "../../../src/modules/breeding/domain/repositories/IBreedingRepository";
-import { IAnimalRepository } from "../../../src/modules/animal/domain/repositories/IAnimalRepository";
+import { BreedingService } from "../../../../src/modules/breeding/application/services/BreedingService";
+import { IBreedingRepository } from "../../../../src/modules/breeding/domain/repositories/IBreedingRepository";
+import { IAnimalRepository } from "../../../../src/modules/animal/domain/repositories/IAnimalRepository";
 import {
   Breeding,
   RiskLevel,
   SyncStatus,
-} from "../../../src/modules/breeding/domain/entities/Breeding";
+} from "../../../../src/modules/breeding/domain/entities/Breeding";
 import {
   Animal,
   Sex,
-  Species,
-} from "../../../src/modules/animal/domain/entities/Animal";
+} from "../../../../src/modules/animal/domain/entities/Animal";
 import {
   NotFoundError,
   ValidationError,
-} from "../../../src/shared/errors/AppError";
-import { TYPES } from "../../../src/shared/di/types";
+} from "../../../../src/shared/errors/AppError";
+import { TYPES } from "../../../../src/shared/di/types";
 import { Container } from "inversify";
 
 describe("BreedingService", () => {
@@ -33,7 +32,8 @@ describe("BreedingService", () => {
     id: maleId,
     crotal: "CR001",
     sex: Sex.MALE,
-    species: Species.SHEEP,
+    species: "SHEEP",
+    speciesId: "species-sheep",
     birthDate: new Date("2023-01-01"),
     isFounder: true,
     userId,
@@ -47,7 +47,8 @@ describe("BreedingService", () => {
     id: femaleId,
     crotal: "CR002",
     sex: Sex.FEMALE,
-    species: Species.SHEEP,
+    species: "SHEEP",
+    speciesId: "species-sheep",
     birthDate: new Date("2023-01-01"),
     isFounder: true,
     userId,
@@ -73,7 +74,7 @@ describe("BreedingService", () => {
   };
 
   beforeEach(() => {
-    container = new Container();
+    container = new Container({ autobind: true });
     breedingRepository = {
       findById: jest.fn(),
       findByParents: jest.fn(),
@@ -114,8 +115,8 @@ describe("BreedingService", () => {
 
   describe("calculateCOI", () => {
     it("should calculate COI successfully", async () => {
-      animalRepository.findById.mockResolvedValue(mockMale as any);
-      animalRepository.findById.mockResolvedValue(mockFemale as any);
+      animalRepository.findById.mockResolvedValueOnce(mockMale as any);
+      animalRepository.findById.mockResolvedValueOnce(mockFemale as any);
 
       const result = await breedingService.calculateCOI(userId, {
         maleId,
@@ -140,8 +141,8 @@ describe("BreedingService", () => {
     });
 
     it("should throw NotFoundError when female not found", async () => {
-      animalRepository.findById.mockResolvedValue(mockMale as any);
-      animalRepository.findById.mockResolvedValue(null);
+      animalRepository.findById.mockResolvedValueOnce(mockMale as any);
+      animalRepository.findById.mockResolvedValueOnce(null);
 
       await expect(
         breedingService.calculateCOI(userId, {
@@ -153,8 +154,8 @@ describe("BreedingService", () => {
 
     it("should throw ValidationError when user does not own male animal", async () => {
       const otherUserMale = { ...mockMale, userId: "other-user" };
-      animalRepository.findById.mockResolvedValue(otherUserMale as any);
-      animalRepository.findById.mockResolvedValue(mockFemale as any);
+      animalRepository.findById.mockResolvedValueOnce(otherUserMale as any);
+      animalRepository.findById.mockResolvedValueOnce(mockFemale as any);
 
       await expect(
         breedingService.calculateCOI(userId, {
@@ -167,8 +168,8 @@ describe("BreedingService", () => {
 
   describe("create", () => {
     it("should create breeding successfully", async () => {
-      animalRepository.findById.mockResolvedValue(mockMale as any);
-      animalRepository.findById.mockResolvedValue(mockFemale as any);
+      animalRepository.findById.mockResolvedValueOnce(mockMale as any);
+      animalRepository.findById.mockResolvedValueOnce(mockFemale as any);
       breedingRepository.create.mockResolvedValue(mockBreeding);
 
       const result = await breedingService.create(userId, {
@@ -198,8 +199,8 @@ describe("BreedingService", () => {
     });
 
     it("should throw NotFoundError when female not found", async () => {
-      animalRepository.findById.mockResolvedValue(mockMale as any);
-      animalRepository.findById.mockResolvedValue(null);
+      animalRepository.findById.mockResolvedValueOnce(mockMale as any);
+      animalRepository.findById.mockResolvedValueOnce(null);
 
       await expect(
         breedingService.create(userId, {
@@ -213,8 +214,8 @@ describe("BreedingService", () => {
 
     it("should throw ValidationError when user does not own animals", async () => {
       const otherUserMale = { ...mockMale, userId: "other-user" };
-      animalRepository.findById.mockResolvedValue(otherUserMale as any);
-      animalRepository.findById.mockResolvedValue(mockFemale as any);
+      animalRepository.findById.mockResolvedValueOnce(otherUserMale as any);
+      animalRepository.findById.mockResolvedValueOnce(mockFemale as any);
 
       await expect(
         breedingService.create(userId, {

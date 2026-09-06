@@ -1,21 +1,20 @@
-import { ProductionRecordService } from "../../../src/modules/production/application/services/ProductionRecordService";
-import { IProductionRecordRepository } from "../../../src/modules/production/domain/repositories/IProductionRecordRepository";
-import { IAnimalRepository } from "../../../src/modules/animal/domain/repositories/IAnimalRepository";
+import { ProductionRecordService } from "../../../../src/modules/production/application/services/ProductionRecordService";
+import { IProductionRecordRepository } from "../../../../src/modules/production/domain/repositories/IProductionRecordRepository";
+import { IAnimalRepository } from "../../../../src/modules/animal/domain/repositories/IAnimalRepository";
 import {
   ProductionRecord,
   ProductionType,
   SyncStatus,
-} from "../../../src/modules/production/domain/entities/ProductionRecord";
+} from "../../../../src/modules/production/domain/entities/ProductionRecord";
 import {
   Animal,
   Sex,
-  Species,
-} from "../../../src/modules/animal/domain/entities/Animal";
+} from "../../../../src/modules/animal/domain/entities/Animal";
 import {
   NotFoundError,
   ValidationError,
-} from "../../../src/shared/errors/AppError";
-import { TYPES } from "../../../src/shared/di/types";
+} from "../../../../src/shared/errors/AppError";
+import { TYPES } from "../../../../src/shared/di/types";
 import { Container } from "inversify";
 
 describe("ProductionRecordService", () => {
@@ -32,7 +31,8 @@ describe("ProductionRecordService", () => {
     id: animalId,
     crotal: "CR12345",
     sex: Sex.FEMALE,
-    species: Species.SHEEP,
+    species: "SHEEP",
+    speciesId: "species-sheep",
     birthDate: new Date("2024-01-01"),
     isFounder: false,
     userId,
@@ -59,7 +59,7 @@ describe("ProductionRecordService", () => {
   };
 
   beforeEach(() => {
-    container = new Container();
+    container = new Container({ autobind: true });
     productionRecordRepository = {
       findById: jest.fn(),
       findAllByUserId: jest.fn(),

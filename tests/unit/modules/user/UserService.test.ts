@@ -1,9 +1,10 @@
-import { UserService } from "../../../src/modules/user/application/services/UserService";
-import { IUserRepository } from "../../../src/modules/user/domain/repositories/IUserRepository";
-import { User } from "../../../src/modules/user/domain/entities/User";
-import { NotFoundError } from "../../../src/shared/errors/AppError";
-import { TYPES } from "../../../src/shared/di/types";
+import { UserService } from "../../../../src/modules/user/application/services/UserService";
+import { IUserRepository } from "../../../../src/modules/user/domain/repositories/IUserRepository";
+import { User } from "../../../../src/modules/user/domain/entities/User";
+import { NotFoundError } from "../../../../src/shared/errors/AppError";
+import { TYPES } from "../../../../src/shared/di/types";
 import { Container } from "inversify";
+import { comparePassword } from "../../../../src/shared/utils/bcrypt";
 
 describe("UserService", () => {
   let userService: UserService;
@@ -19,7 +20,7 @@ describe("UserService", () => {
   };
 
   beforeEach(() => {
-    container = new Container();
+    container = new Container({ autobind: true });
     userRepository = {
       findById: jest.fn(),
       findByDni: jest.fn(),
@@ -108,8 +109,12 @@ describe("UserService", () => {
         updatedAt: updatedUser.updatedAt,
       });
       expect(userRepository.update).toHaveBeenCalledWith(mockUser.id, {
-        password: "NewPassword123!",
+        password: expect.stringMatching(/^\$2[aby]\$/),
       });
+      const storedPassword = userRepository.update.mock.calls[0][1].password!;
+      expect(await comparePassword("NewPassword123!", storedPassword)).toBe(
+        true,
+      );
     });
 
     it("should handle update without password field", async () => {

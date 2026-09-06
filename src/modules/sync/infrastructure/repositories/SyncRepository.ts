@@ -17,22 +17,6 @@ export class SyncRepository implements ISyncRepository {
     return this.mapToEntity(syncLog);
   }
 
-  async findPendingLogs(userId: string): Promise<SyncLog[]> {
-    const logs = await prisma.syncLog.findMany({
-      where: { userId, status: SyncStatus.PENDING },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return logs.map((l) => this.mapToEntity(l));
-  }
-
-  async updateLogStatus(id: string, status: SyncStatus): Promise<void> {
-    await prisma.syncLog.update({
-      where: { id },
-      data: { status },
-    });
-  }
-
   async deleteLogs(userId: string, olderThan: Date): Promise<void> {
     await prisma.syncLog.deleteMany({
       where: { userId, createdAt: { lt: olderThan } },

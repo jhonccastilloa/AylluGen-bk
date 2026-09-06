@@ -13,6 +13,7 @@ module.exports = {
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html"],
   moduleNameMapper: {
+    "^src/(.*)$": "<rootDir>/src/$1",
     "^@domain/(.*)$": "<rootDir>/src/modules/$1/domain",
     "^@application/(.*)$": "<rootDir>/src/modules/$1/application",
     "^@infrastructure/(.*)$": "<rootDir>/src/infrastructure/$1",

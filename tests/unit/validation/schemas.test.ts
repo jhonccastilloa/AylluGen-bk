@@ -2,8 +2,8 @@ import {
   registerSchema,
   loginSchema,
   refreshTokenSchema,
-} from "../../src/modules/auth/application/schemas/auth.schema";
-import { updateUserSchema } from "../../src/modules/user/application/schemas/user.schema";
+} from "../../../src/modules/auth/application/schemas/auth.schema";
+import { updateUserSchema } from "../../../src/modules/user/application/schemas/user.schema";
 
 describe("Auth Schemas", () => {
   describe("registerSchema", () => {

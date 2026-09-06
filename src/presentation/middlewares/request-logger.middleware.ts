@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "node:crypto";
 import winston from "winston";
 import { logger } from "../../shared/logging";
 import { AuthRequest } from "./auth.middleware";
@@ -15,7 +15,7 @@ export const requestLogger = (
   res: Response,
   next: NextFunction,
 ): void => {
-  const requestId = (req.headers["x-request-id"] as string) || uuidv4();
+  const requestId = (req.headers["x-request-id"] as string) || randomUUID();
   req.id = requestId;
 
   res.setHeader("X-Request-ID", requestId);

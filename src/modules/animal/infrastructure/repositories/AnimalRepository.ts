@@ -16,7 +16,7 @@ type AnimalWithRelations = any;
 export class AnimalRepository implements IAnimalRepository {
   async findById(id: string): Promise<Animal | null> {
     const animal = await (prisma.animal as any).findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: { speciesCatalog: true },
     });
     return animal ? this.mapToEntity(animal) : null;
@@ -31,7 +31,10 @@ export class AnimalRepository implements IAnimalRepository {
     return animal ? this.mapToEntity(animal) : null;
   }
 
-  async findAllByUserId(userId: string, includeDeleted = false): Promise<Animal[]> {
+  async findAllByUserId(
+    userId: string,
+    includeDeleted = false,
+  ): Promise<Animal[]> {
     const animals = await (prisma.animal as any).findMany({
       where: includeDeleted ? { userId } : { userId, deletedAt: null },
       include: { speciesCatalog: true },
@@ -52,7 +55,11 @@ export class AnimalRepository implements IAnimalRepository {
   async update(id: string, data: AnimalUpdateDTO): Promise<Animal> {
     const animal = await (prisma.animal as any).update({
       where: { id },
-      data: { ...data, clientUpdatedAt: new Date(), syncVersion: { increment: 1 } },
+      data: {
+        ...data,
+        clientUpdatedAt: new Date(),
+        syncVersion: { increment: 1 },
+      },
       include: { speciesCatalog: true },
     });
 
