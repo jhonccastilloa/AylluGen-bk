@@ -1,12 +1,14 @@
 # Ayllu Gen Backend - Agent Guidelines
 
+Reviewed 2026-09-05 against the current code. See [README](README.md) and [Local-First](docs/LOCAL_FIRST.md).
+
 ## Essential Commands
 
 ### Build & Development
 
 - `npm run dev` - Start development server with hot reload (nodemon)
 - `npm run build` - Compile TypeScript to `dist/` directory
-- `npm start` - Run production server from `dist/server.js`
+- `npm start` - Run `node dist`, compiled entry from `src/index.ts`
 
 ### Code Quality
 
@@ -25,7 +27,8 @@
 
 - `npm run prisma:generate` - Generate Prisma client
 - `npm run prisma:migrate` - Run migrations in dev
-- `npm run prisma:push` - Push schema changes to database
+- `npm run prisma:push` exists, but must not replace SQL migrations for persistent sync databases (triggers/constraints are required).
+- `npx prisma migrate deploy` - Apply existing migrations to an authorized destination after backup/preflight.
 - `npm run prisma:studio` - Open Prisma Studio UI
 
 ## Modular Clean Architecture
@@ -40,7 +43,7 @@ src/modules/{module-name}/
 └── presentation/      # HTTP layer (controllers, routes)
 ```
 
-Current modules: user, auth, animal, breeding, health, production, sync
+Current modules: user, auth, species, animal, breeding, health, production, sync
 
 ## Creating a New Module
 
@@ -80,7 +83,7 @@ Current modules: user, auth, animal, breeding, health, production, sync
 ## TypeScript & Imports
 
 - Strict mode enabled: noImplicitAny, noUnusedLocals, noUnusedParameters
-- Single quotes for imports
+- Preserve existing file formatting; use project Prettier (many backend files use double quotes).
 - Path aliases: `@domain/*`, `@application/*`, `@infrastructure/*`, `@presentation/*`, `@shared/*`
 - Cross-module imports: use relative paths (e.g., `../../../user/infrastructure/repositories/UserRepository`)
 
@@ -89,7 +92,7 @@ Current modules: user, auth, animal, breeding, health, production, sync
 - Use InversifyJS for DI
 - All services/controllers: add `@injectable()` decorator
 - Inject dependencies: `@inject(TYPE_IUserRepository) private userRepository: IUserRepository`
-- Define TYPE symbols in repository interfaces: `export const TYPE_IUserRepository = Symbol("IUserRepository");`
+- Match existing DI bindings: legacy modules use `TYPES` from shared/di; Watermelon uses `TYPE_IWatermelonRepository` plus class bindings. Do not invent a different token for an existing binding.
 
 ## Zod Schemas (No DTOs)
 
@@ -125,7 +128,7 @@ Wrap route handlers: `router.post('/register', validate(registerSchema), asyncHa
 - Implement domain interfaces in infrastructure layer
 - Methods return `Promise<T | null>` for optional results
 - Use Prisma client from `src/infrastructure/database/prisma/client`
-- Use `setTransactionClient()` for transactions in repositories
+- Auth still uses mutable `setTransactionClient()` on singleton repositories; this is concurrency debt, not a pattern for new code. Sync v2 uses a session per transaction.
 - CRUD operations: `findById`, `create`, `update`, `delete`
 
 ## Authentication
@@ -159,6 +162,17 @@ Wrap route handlers: `router.post('/register', validate(registerSchema), asyncHa
 ## Prisma Models
 
 - Use `@@map("table_name")` for custom table names
-- Define relations with cascade deletes
+- Define cascade/SetNull/restrict behavior according to the relationship; preserve sync triggers and tombstones.
 - UUID primary keys with `@default(uuid())`
 - Include `createdAt` and `updatedAt` timestamps
+
+## Sync and compatibility
+
+- Only schema 4 is currently accepted by POST /api/sync/v2/pull; push is atomic and returns 204.
+- Checkpoints are monotonic per-owner counters, not wall-clock timestamps. Pull uses a consistent snapshot.
+- Derive owner from JWT; whitelist tables/columns and validate final relationships and conflicts.
+- Preserve REST and deprecated queue endpoints until external client usage is checked.
+- Never purge tombstones/receipts without a checkpoint expiry and safe rebootstrap protocol.
+- General rate limiting is not currently mounted; authLimiter is mounted for register/login/logout. Do not document blanket rate limiting.
+- OpenAPI does not yet register species. Route registration does not automatically update Swagger.
+- Integration cases need SYNC_TEST_DATABASE_URL pointing to isolated sync_test, never production. Latest cleanup run: 184 pass, 41 DB cases skipped; build/lint pass.
